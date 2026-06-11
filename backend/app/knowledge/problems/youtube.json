@@ -1,0 +1,13 @@
+{
+  "keywords": "YouTube video upload watch view platform content creator",
+  "description": "Video sharing platform with 500 hours of video uploaded per minute",
+  "patterns": [
+    "Chunked upload with resumability (Google Resumable Upload API pattern)",
+    "Async video processing pipeline with multiple encoding workers",
+    "CDN for global video chunk delivery",
+    "Deduplication using perceptual hashing",
+    "View count with eventual consistency: Redis counter + periodic DB flush",
+    "Recommendation with collaborative filtering",
+    "Bigtable for video metadata"
+  ]
+}

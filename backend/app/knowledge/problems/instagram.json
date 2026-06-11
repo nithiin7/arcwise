@@ -1,0 +1,13 @@
+{
+  "keywords": "Instagram photo sharing social media image feed stories",
+  "description": "Photo and video sharing platform with 2B+ monthly active users",
+  "patterns": [
+    "CDN for image delivery globally",
+    "Cassandra for media metadata",
+    "Fan-out-on-write for feed generation",
+    "Redis for social graph cache",
+    "S3 for original image storage",
+    "Async image resizing pipeline",
+    "Explore feed via ML ranking"
+  ]
+}

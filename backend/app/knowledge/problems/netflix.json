@@ -1,0 +1,13 @@
+{
+  "keywords": "Netflix video streaming media content delivery watch",
+  "description": "Global video streaming serving 250M+ subscribers in 190 countries",
+  "patterns": [
+    "Open Connect CDN for video delivery at edge nodes",
+    "Adaptive bitrate streaming via HLS/DASH",
+    "Microservices with chaos engineering (Chaos Monkey)",
+    "Cassandra for viewing history and user data",
+    "Kafka for event pipeline and analytics",
+    "Multi-region active-active deployment",
+    "Zuul API gateway for routing"
+  ]
+}

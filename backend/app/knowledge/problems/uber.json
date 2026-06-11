@@ -1,0 +1,13 @@
+{
+  "keywords": "Uber ride sharing location matching driver dispatch taxi",
+  "description": "Real-time ride matching platform with geospatial matching challenges",
+  "patterns": [
+    "Geospatial indexing with Google S2 or QuadTree",
+    "WebSocket for real-time driver location updates",
+    "Redis for driver location cache (1s TTL)",
+    "Kafka for trip lifecycle events",
+    "Surge pricing algorithm with demand/supply ratio",
+    "ETA calculation via road network graph",
+    "Two-phase commit for payment + trip atomicity"
+  ]
+}

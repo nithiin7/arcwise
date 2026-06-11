@@ -1,0 +1,14 @@
+{
+  "keywords": "WhatsApp messaging chat instant message real-time",
+  "description": "Large-scale real-time messaging system handling 100B+ messages/day",
+  "patterns": [
+    "WebSocket connections for real-time delivery",
+    "Kafka for async message processing",
+    "Cassandra for message storage (high write throughput)",
+    "Redis for online presence and status",
+    "S3 + CDN for media storage and delivery",
+    "Fan-out-on-write for group messages up to 256 members",
+    "Push notifications via APNs/FCM for offline users",
+    "End-to-end encryption at application layer"
+  ]
+}

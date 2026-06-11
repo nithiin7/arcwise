@@ -1,0 +1,13 @@
+{
+  "keywords": "Twitter tweet social feed timeline microblogging follow",
+  "description": "Social media platform handling 500M+ tweets/day with complex fan-out",
+  "patterns": [
+    "Fan-out-on-write for regular users (<10K followers)",
+    "Fan-out-on-read for celebrities (>10K followers)",
+    "Redis for pre-computed timeline cache",
+    "Cassandra for tweet storage",
+    "Kafka for event streaming and async fan-out",
+    "Elasticsearch for tweet search",
+    "Consistent hashing for tweet sharding"
+  ]
+}

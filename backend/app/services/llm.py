@@ -4,6 +4,7 @@ import re
 from collections.abc import AsyncGenerator
 from typing import Any
 
+from json_repair import repair_json
 from litellm import acompletion
 
 from app.core.config import settings
@@ -11,10 +12,15 @@ from app.core.config import settings
 logger = logging.getLogger(__name__)
 
 
+def _is_ollama(model: str) -> bool:
+    # Matches both "ollama/qwen3:4b" and bare "qwen3:4b" (tag format, no provider slash)
+    return model.startswith("ollama/") or ("/" not in model and ":" in model)
+
+
 def _resolve_api_key(model: str, session_key: str | None) -> str | None:
     if session_key:
         return session_key
-    if model.startswith("ollama/"):
+    if _is_ollama(model):
         return None
     if model.startswith(("claude", "anthropic/")):
         return settings.anthropic_api_key
@@ -30,7 +36,7 @@ def _resolve_api_key(model: str, session_key: str | None) -> str | None:
 
 
 def _extra_kwargs(model: str, json_mode: bool = False) -> dict[str, Any]:
-    if model.startswith("ollama/"):
+    if _is_ollama(model):
         body: dict[str, Any] = {"think": False}
         if json_mode:
             body["format"] = "json"
@@ -98,6 +104,10 @@ def extract_json(text: str) -> dict[str, Any]:
     if stripped.startswith("```"):
         stripped = re.sub(r"^```(?:json)?\s*\n?", "", stripped)
         stripped = re.sub(r"\n?```\s*$", "", stripped)
-    stripped = re.sub(r",\s*([}\]])", r"\1", stripped)
-    result: dict[str, Any] = json.loads(stripped.strip())
+    stripped = re.sub(r",\s*([}\]])", r"\1", stripped).strip()
+    try:
+        result: dict[str, Any] = json.loads(stripped)
+    except json.JSONDecodeError:
+        logger.warning("JSON parse failed, attempting repair")
+        result = json.loads(repair_json(stripped))
     return result

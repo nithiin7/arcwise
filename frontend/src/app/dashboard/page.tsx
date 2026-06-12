@@ -324,7 +324,7 @@ export default function HomePage() {
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 + i * 0.05, duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-              onClick={() => setValue("problem", ex)}
+              onClick={() => setValue("problem", ex, { shouldValidate: true })}
               style={{
                 padding: "6px 14px",
                 borderRadius: 999,

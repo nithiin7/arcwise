@@ -213,7 +213,7 @@ export default function ClarifyPage() {
 
               {/* Option chips */}
               {session.clarifications[step]?.options?.length ? (
-                <div className="flex flex-wrap gap-2 mb-3">
+                <div className="flex flex-wrap gap-2 mb-3" style={{ marginBottom: 16 }}>
                   {session.clarifications[step].options!.map((opt, i) => {
                     const selected = getValues("answer") === opt;
                     return (

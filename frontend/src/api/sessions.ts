@@ -1,4 +1,5 @@
 import { get, post } from "@/lib/api";
+import type { Session } from "@/types";
 
 export interface CreateSessionResponse {
   session_id: string;
@@ -30,6 +31,10 @@ export function submitClarifications(
   userScale?: string,
 ): Promise<void> {
   return post(`/sessions/${sessionId}/clarify`, { answers, user_scale: userScale });
+}
+
+export function getSession(sessionId: string): Promise<Session> {
+  return get(`/sessions/${sessionId}`);
 }
 
 export function listSessions(): Promise<SessionSummary[]> {

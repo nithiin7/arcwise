@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -18,6 +18,7 @@ import Spinner from "@/components/icons/Spinner";
 
 export default function ClarifyPage() {
   const router = useRouter();
+  const params = useParams<{ id: string }>();
   const session = useSessionStore((s) => s.session);
   const setSession = useSessionStore((s) => s.setSession);
 
@@ -54,8 +55,10 @@ export default function ClarifyPage() {
   );
 
   useEffect(() => {
-    if (!session) router.replace("/");
-  }, [session, router]);
+    if (session) return;
+    api.getSession(params.id).then(setSession).catch(() => router.replace("/"));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (step < questions.length) {

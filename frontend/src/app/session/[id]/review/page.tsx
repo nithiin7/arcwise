@@ -21,12 +21,18 @@ export default function ReviewPage() {
 
   const session = useSessionStore((s) => s.session);
   const review = useSessionStore((s) => s.review);
+  const setSession = useSessionStore((s) => s.setSession);
   const setReview = useSessionStore((s) => s.setReview);
   const reset = useSessionStore((s) => s.reset);
 
   useEffect(() => {
-    if (!session) router.replace("/");
-  }, [session, router]);
+    if (session) return;
+    api.getSession(sessionId).then((s) => {
+      setSession(s);
+      if (s.review) setReview(s.review);
+    }).catch(() => router.replace("/"));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const reviewMutation = useMutation({
     mutationFn: () => api.reviewDesign(sessionId),
@@ -40,7 +46,7 @@ export default function ReviewPage() {
     if (!session || review) return;
     reviewMutation.mutate();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [session]);
 
   if (!session) return null;
 

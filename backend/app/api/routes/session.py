@@ -1,10 +1,10 @@
 from typing import Any
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 
 from app.agents.clarification import generate_clarifications
 from app.models.session import ClarificationQA, CreateSessionRequest, Session
-from app.services.session_store import list_sessions, save_session
+from app.services.session_store import get_session, list_sessions, save_session
 
 router = APIRouter()
 
@@ -23,6 +23,15 @@ async def get_sessions() -> list[dict[str, Any]]:
         }
         for s in sessions
     ]
+
+
+@router.get("/{session_id}")
+async def get_session_by_id(session_id: str) -> dict[str, Any]:
+    session = await get_session(session_id)
+    if session is None:
+        raise HTTPException(status_code=404, detail="Session not found")
+    data: dict[str, Any] = session.model_dump(mode="json", exclude={"api_key"})
+    return data
 
 
 @router.post("")

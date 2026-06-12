@@ -60,8 +60,10 @@ export default function DesignPage() {
   );
 
   useEffect(() => {
-    if (!session) router.replace("/");
-  }, [session, router]);
+    if (session) return;
+    api.getSession(sessionId).then(setSession).catch(() => router.replace("/"));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const suggestMutation = useMutation({
     mutationFn: () => api.suggestArchitecture(sessionId),

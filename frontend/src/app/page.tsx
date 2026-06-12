@@ -1,70 +1,11 @@
 "use client";
 
-import { useState, useRef, useEffect, KeyboardEvent } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import * as api from "@/lib/api";
-import type { SessionSummary } from "@/lib/api";
-import { useSessionStore } from "@/store/sessionStore";
-import { useSettingsStore } from "@/store/settingsStore";
-import ModelSelect from "@/components/ModelSelect";
-import type { Session } from "@/types";
-
-const EXAMPLES = [
-  "Design WhatsApp",
-  "Design Twitter's feed",
-  "Design Netflix",
-  "Design Uber",
-  "Design YouTube",
-];
-
-const MODEL_GROUPS = [
-  {
-    group: "Claude",
-    options: [
-      { value: "claude-sonnet-4-6", label: "Claude Sonnet 4.6" },
-      { value: "claude-opus-4-8", label: "Claude Opus 4.8" },
-      { value: "claude-haiku-4-5-20251001", label: "Claude Haiku 4.5" },
-    ],
-  },
-  {
-    group: "OpenAI",
-    options: [
-      { value: "gpt-4o", label: "GPT-4o" },
-      { value: "gpt-4o-mini", label: "GPT-4o mini" },
-    ],
-  },
-  {
-    group: "Google",
-    options: [
-      { value: "gemini/gemini-2.0-flash", label: "Gemini 2.0 Flash" },
-      { value: "gemini/gemini-1.5-pro", label: "Gemini 1.5 Pro" },
-    ],
-  },
-  {
-    group: "xAI",
-    options: [{ value: "xai/grok-2", label: "Grok 2" }],
-  },
-  {
-    group: "Groq",
-    options: [
-      { value: "groq/llama-3.3-70b-versatile", label: "Llama 3.3 70B (Groq)" },
-      { value: "groq/mixtral-8x7b-32768", label: "Mixtral 8x7B (Groq)" },
-    ],
-  },
-  {
-    group: "Ollama (Local)",
-    options: [], // populated dynamically by ModelSelect
-  },
-];
-
-const DEFAULT_MODEL = "claude-sonnet-4-6";
-
 
 function LogoMark() {
   return (
-    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <svg width="20" height="20" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
       <rect x="0" y="0" width="8" height="8" rx="2" fill="#6366f1" />
       <rect x="10" y="0" width="8" height="8" rx="2" fill="#6366f1" opacity="0.7" />
       <rect x="0" y="10" width="8" height="8" rx="2" fill="#6366f1" opacity="0.7" />
@@ -73,436 +14,594 @@ function LogoMark() {
   );
 }
 
-function GearIcon() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path
-        fillRule="evenodd"
-        clipRule="evenodd"
-        d="M7.5 1a.5.5 0 0 1 .491.401l.2 1.196a4.97 4.97 0 0 1 1.055.437l1.02-.614a.5.5 0 0 1 .625.08l.707.707a.5.5 0 0 1 .08.625l-.614 1.02a4.97 4.97 0 0 1 .437 1.055l1.196.2A.5.5 0 0 1 14 7.5v1a.5.5 0 0 1-.403.491l-1.196.2a4.97 4.97 0 0 1-.437 1.055l.614 1.02a.5.5 0 0 1-.08.625l-.707.707a.5.5 0 0 1-.625.08l-1.02-.614a4.97 4.97 0 0 1-1.055.437l-.2 1.196A.5.5 0 0 1 7.5 14h-1a.5.5 0 0 1-.491-.403l-.2-1.196a4.97 4.97 0 0 1-1.055-.437l-1.02.614a.5.5 0 0 1-.625-.08l-.707-.707a.5.5 0 0 1-.08-.625l.614-1.02a4.97 4.97 0 0 1-.437-1.055l-1.196-.2A.5.5 0 0 1 1 7.5v-1a.5.5 0 0 1 .403-.491l1.196-.2a4.97 4.97 0 0 1 .437-1.055l-.614-1.02a.5.5 0 0 1 .08-.625l.707-.707a.5.5 0 0 1 .625-.08l1.02.614a4.97 4.97 0 0 1 1.055-.437l.2-1.196A.5.5 0 0 1 6.5 1h1ZM7 7.5a.5.5 0 1 0 1 0 .5.5 0 0 0-1 0Zm.5-2a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z"
-        fill="currentColor"
-      />
-    </svg>
-  );
-}
+const FEATURES = [
+  {
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M9.663 17h4.673M12 3v1m6.364 1.636-.707.707M21 12h-1M4 12H3m3.343-5.657-.707-.707m2.828 9.9a5 5 0 1 1 7.072 0l-.548.547A3.374 3.374 0 0 0 14 18.469V19a2 2 0 1 1-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+      </svg>
+    ),
+    title: "AI-Guided Architecture",
+    description: "Describe any system and get a complete architecture walkthrough — from components to trade-offs.",
+  },
+  {
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-5l-3 3v-3z" />
+      </svg>
+    ),
+    title: "Smart Clarification",
+    description: "Before designing, the AI asks targeted questions to sharpen your requirements and assumptions.",
+  },
+  {
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="3" width="18" height="18" rx="2" />
+        <path d="M3 9h18M9 21V9" />
+      </svg>
+    ),
+    title: "Mermaid Diagrams",
+    description: "Visual system diagrams generated automatically. Edit, refine, and export with ease.",
+  },
+  {
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+      </svg>
+    ),
+    title: "Iterative Refinement",
+    description: "Chat directly with the AI to adjust your diagram — add components, change flows, explore alternatives.",
+  },
+  {
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 0 0 1.946-.806 3.42 3.42 0 0 1 4.438 0 3.42 3.42 0 0 0 1.946.806 3.42 3.42 0 0 1 3.138 3.138 3.42 3.42 0 0 0 .806 1.946 3.42 3.42 0 0 1 0 4.438 3.42 3.42 0 0 0-.806 1.946 3.42 3.42 0 0 1-3.138 3.138 3.42 3.42 0 0 0-1.946.806 3.42 3.42 0 0 1-4.438 0 3.42 3.42 0 0 0-1.946-.806 3.42 3.42 0 0 1-3.138-3.138 3.42 3.42 0 0 0-.806-1.946 3.42 3.42 0 0 1 0-4.438 3.42 3.42 0 0 0 .806-1.946 3.42 3.42 0 0 1 3.138-3.138z" />
+      </svg>
+    ),
+    title: "Scored Review",
+    description: "Get evaluated across 5 key dimensions — scalability, reliability, cost, security, and simplicity.",
+  },
+  {
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="10" />
+        <path d="M12 8v4l3 3" />
+      </svg>
+    ),
+    title: "Revision History",
+    description: "Every iteration is saved. Browse past diagram versions and pick up any session where you left off.",
+  },
+  {
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+      </svg>
+    ),
+    title: "Multi-Model Support",
+    description: "Choose from Claude, GPT-4, Gemini, Grok, Llama, and more. Mix models across sessions.",
+  },
+  {
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+        <polyline points="9 22 9 12 15 12 15 22" />
+      </svg>
+    ),
+    title: "Session Dashboard",
+    description: "All your designs in one place. Track progress, scores, and jump back in at any stage.",
+  },
+];
 
-function Spinner() {
+const container = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.07 } },
+};
+
+const item = {
+  hidden: { opacity: 0, y: 16 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.45, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] } },
+};
+
+export default function LandingPage() {
   return (
-    <svg
-      className="animate-spin"
-      width="16"
-      height="16"
-      viewBox="0 0 16 16"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
+    <div
+      style={{
+        minHeight: "100vh",
+        background: "var(--color-bg)",
+        color: "var(--color-text)",
+        fontFamily: "Inter, sans-serif",
+      }}
     >
-      <circle cx="8" cy="8" r="6" stroke="currentColor" strokeOpacity="0.25" strokeWidth="2" />
-      <path
-        d="M14 8a6 6 0 0 0-6-6"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-function statusLabel(status: SessionSummary["status"]) {
-  switch (status) {
-    case "complete": return "Complete";
-    case "reviewing": return "Reviewing";
-    case "designing": return "Designing";
-    default: return "Clarifying";
-  }
-}
-
-function statusColor(status: SessionSummary["status"]) {
-  switch (status) {
-    case "complete": return "var(--color-success, #22c55e)";
-    case "reviewing": return "var(--color-primary)";
-    case "designing": return "#f59e0b";
-    default: return "var(--color-text-faint)";
-  }
-}
-
-function sessionHref(s: SessionSummary) {
-  switch (s.status) {
-    case "complete":
-    case "reviewing": return `/session/${s.id}/review`;
-    case "designing": return `/session/${s.id}/design`;
-    default: return `/session/${s.id}/clarify`;
-  }
-}
-
-export default function HomePage() {
-  const router = useRouter();
-  const setSession = useSessionStore((s) => s.setSession);
-  const getKeyForModel = useSettingsStore((s) => s.getKeyForModel);
-  const [problem, setProblem] = useState("");
-  const [model, setModel] = useState(DEFAULT_MODEL);
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [history, setHistory] = useState<SessionSummary[]>([]);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  useEffect(() => {
-    api.listSessions().then(setHistory).catch(() => {});
-  }, []);
-
-  const storedKey = getKeyForModel(model);
-  const isLocalModel = model.startsWith("ollama/");
-  const missingKey = !storedKey && !isLocalModel;
-  const canSubmit = !!problem.trim() && !loading && !missingKey;
-
-  async function handleSubmit() {
-    if (!canSubmit) return;
-    setError("");
-    setLoading(true);
-    try {
-      const res = await api.createSession(problem.trim(), model, storedKey || undefined);
-      const session: Session = {
-        id: res.session_id,
-        problem: res.problem,
-        model: res.model,
-        clarifications: res.questions.map((q) => ({ question: q.question, answer: "", options: q.options })),
-        architecture: {
-          llm_suggested_mermaid: "",
-          llm_explanation: "",
-          component_justifications: {},
-          scale_assumption: "",
-          revisions: [],
-          final_mermaid: "",
-        },
-        status: "clarifying",
-      };
-      setSession(session);
-      router.push(`/session/${res.session_id}/clarify`);
-    } catch (err) {
-      console.error(err);
-      setError(err instanceof Error ? err.message : "Something went wrong.");
-      setLoading(false);
-    }
-  }
-
-  function handleKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSubmit();
-    }
-  }
-
-  return (
-    <div className="relative flex flex-1 flex-col items-center justify-center min-h-screen px-4 overflow-hidden">
-      {/* Ambient glow */}
-      <div
-        aria-hidden
-        className="pointer-events-none fixed inset-0 flex items-center justify-center"
-      >
-        <div
-          style={{
-            width: 600,
-            height: 600,
-            borderRadius: "50%",
-            background: "radial-gradient(circle, rgba(99,102,241,0.12) 0%, transparent 70%)",
-            filter: "blur(40px)",
-          }}
-        />
-      </div>
-
-      {/* Settings link */}
-      <Link
-        href="/settings"
+      {/* Nav */}
+      <nav
         style={{
           position: "fixed",
-          top: 16,
-          right: 20,
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 50,
           display: "flex",
           alignItems: "center",
-          gap: 5,
-          color: "var(--color-text-faint)",
-          fontSize: 12,
-          textDecoration: "none",
-          padding: "5px 10px",
-          borderRadius: "var(--radius-sm)",
-          transition: "color 0.15s",
-          zIndex: 20,
+          justifyContent: "space-between",
+          padding: "14px 28px",
+          backdropFilter: "blur(12px)",
+          WebkitBackdropFilter: "blur(12px)",
+          borderBottom: "1px solid var(--color-border)",
+          background: "rgba(var(--color-bg-raw, 250,250,250), 0.8)",
         }}
-        onMouseEnter={(e) => ((e.currentTarget as HTMLAnchorElement).style.color = "var(--color-text-muted)")}
-        onMouseLeave={(e) => ((e.currentTarget as HTMLAnchorElement).style.color = "var(--color-text-faint)")}
       >
-        <GearIcon />
-        Settings
-      </Link>
-
-      <motion.div
-        className="relative z-10 flex flex-col items-center w-full max-w-2xl"
-        initial={{ opacity: 0, y: 24 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-      >
-        {/* Logo + name */}
-        <div className="flex items-center gap-2 mb-8">
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <LogoMark />
           <span
             style={{
-              fontSize: 13,
-              fontWeight: 600,
-              color: "var(--color-text-muted)",
-              letterSpacing: "0.05em",
-              textTransform: "uppercase",
+              fontSize: 14,
+              fontWeight: 700,
+              letterSpacing: "0.04em",
+              color: "var(--color-text)",
             }}
           >
             Arcwise
           </span>
         </div>
-
-        {/* Headline */}
-        <h1
-          className="heading-gradient"
+        <Link
+          href="/dashboard"
           style={{
-            fontSize: "clamp(2rem, 5vw, 2.75rem)",
-            fontWeight: 700,
-            lineHeight: 1.15,
-            textAlign: "center",
-            marginBottom: 12,
+            padding: "7px 18px",
+            borderRadius: "var(--radius-sm)",
+            background: "var(--color-primary)",
+            color: "#fff",
+            fontSize: 13,
+            fontWeight: 500,
+            textDecoration: "none",
+            transition: "opacity 0.15s",
           }}
+          onMouseEnter={(e) => ((e.currentTarget as HTMLAnchorElement).style.opacity = "0.85")}
+          onMouseLeave={(e) => ((e.currentTarget as HTMLAnchorElement).style.opacity = "1")}
         >
-          What will you design today?
-        </h1>
+          Open App
+        </Link>
+      </nav>
 
-        {/* Sub-text */}
-        <p
-          style={{
-            color: "var(--color-text-muted)",
-            fontSize: 15,
-            textAlign: "center",
-            marginBottom: 32,
-            maxWidth: 440,
-            lineHeight: 1.6,
-          }}
-        >
-          Enter a system design problem. The AI will guide you through the architecture.
-        </p>
-
-        {/* Textarea card */}
+      {/* Hero */}
+      <section
+        style={{
+          minHeight: "100vh",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          textAlign: "center",
+          padding: "100px 24px 80px",
+          position: "relative",
+          overflow: "hidden",
+        }}
+      >
+        {/* Background glow */}
         <div
+          aria-hidden
           style={{
-            width: "100%",
-            position: "relative",
-            background: "var(--color-surface)",
-            border: "1px solid var(--color-border)",
-            borderRadius: "var(--radius-lg)",
-            padding: "14px 14px 48px 14px",
+            position: "absolute",
+            inset: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            pointerEvents: "none",
           }}
         >
-          <textarea
-            ref={textareaRef}
-            rows={3}
-            value={problem}
-            onChange={(e) => setProblem(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="e.g. Design a URL shortener like bit.ly…"
-            style={{
-              width: "100%",
-              background: "transparent",
-              border: "none",
-              outline: "none",
-              resize: "none",
-              color: "var(--color-text)",
-              fontSize: 15,
-              lineHeight: 1.6,
-              fontFamily: "inherit",
-            }}
-          />
-
-          {/* Bottom toolbar */}
           <div
             style={{
-              position: "absolute",
-              bottom: 10,
-              left: 10,
-              right: 10,
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
+              width: 700,
+              height: 700,
+              borderRadius: "50%",
+              background: "radial-gradient(circle, rgba(99,102,241,0.1) 0%, transparent 65%)",
+              filter: "blur(48px)",
             }}
-          >
-            {/* Model picker */}
-            <ModelSelect
-              groups={MODEL_GROUPS}
-              value={model}
-              onChange={(v) => { setModel(v); setError(""); }}
-            />
-
-            {/* Hints */}
-            {missingKey && (
-              <Link
-                href="/settings"
-                style={{
-                  flex: 1,
-                  fontSize: 12,
-                  color: "var(--color-warning)",
-                  textDecoration: "none",
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                }}
-              >
-                API key required — add in Settings →
-              </Link>
-            )}
-            {isLocalModel && (
-              <span
-                style={{
-                  flex: 1,
-                  fontSize: 12,
-                  color: "var(--color-text-faint)",
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                }}
-              >
-                Runs via Ollama on localhost:11434
-              </span>
-            )}
-
-            {/* Spacer when no hint */}
-            {!missingKey && !isLocalModel && <div style={{ flex: 1 }} />}
-
-            {/* Submit button */}
-            <button
-              onClick={handleSubmit}
-              disabled={!canSubmit}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                padding: "7px 14px",
-                borderRadius: "var(--radius-sm)",
-                background: canSubmit ? "var(--color-primary)" : "var(--color-surface-offset)",
-                color: canSubmit ? "#fff" : "var(--color-text-faint)",
-                border: "none",
-                cursor: canSubmit ? "pointer" : "not-allowed",
-                fontSize: 13,
-                fontWeight: 500,
-                fontFamily: "inherit",
-                transition: "background 0.15s",
-                flexShrink: 0,
-              }}
-            >
-              {loading ? (
-                <>
-                  <Spinner />
-                  <span>Thinking…</span>
-                </>
-              ) : (
-                <span>Submit ↵</span>
-              )}
-            </button>
-          </div>
+          />
         </div>
 
-        {/* Error message */}
-        {error && (
-          <p style={{ color: "#ef4444", fontSize: 13, marginTop: 8, alignSelf: "flex-start" }}>
-            {error}
-          </p>
-        )}
-
-        {/* Example pills */}
-        <div className="flex flex-wrap justify-center gap-2" style={{ marginTop: 16 }}>
-          {EXAMPLES.map((ex, i) => (
-            <motion.button
-              key={ex}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 + i * 0.05, duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-              onClick={() => setProblem(ex)}
+        <motion.div
+          initial={{ opacity: 0, y: 28 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+          style={{ position: "relative", zIndex: 10, maxWidth: 680 }}
+        >
+          {/* Badge */}
+          <div
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "5px 14px",
+              borderRadius: 999,
+              border: "1px solid rgba(99,102,241,0.35)",
+              background: "rgba(99,102,241,0.08)",
+              fontSize: 12,
+              fontWeight: 500,
+              color: "var(--color-primary)",
+              marginBottom: 28,
+              letterSpacing: "0.02em",
+            }}
+          >
+            <span
               style={{
-                padding: "6px 14px",
-                borderRadius: 999,
+                width: 6,
+                height: 6,
+                borderRadius: "50%",
+                background: "var(--color-primary)",
+                display: "inline-block",
+              }}
+            />
+            AI-powered system design practice
+          </div>
+
+          <h1
+            className="heading-gradient"
+            style={{
+              fontSize: "clamp(2.4rem, 6vw, 3.75rem)",
+              fontWeight: 700,
+              lineHeight: 1.1,
+              letterSpacing: "-0.02em",
+              marginBottom: 20,
+            }}
+          >
+            Master system design
+            <br />
+            with an AI coach
+          </h1>
+
+          <p
+            style={{
+              fontSize: "clamp(15px, 2.5vw, 17px)",
+              color: "var(--color-text-muted)",
+              lineHeight: 1.7,
+              marginBottom: 40,
+              maxWidth: 480,
+              margin: "0 auto 40px",
+            }}
+          >
+            Describe a system. Get clarifying questions, an architecture diagram,
+            iterative refinement, and a scored review — all in one flow.
+          </p>
+
+          <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
+            <Link
+              href="/dashboard"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "12px 28px",
+                borderRadius: "var(--radius-sm)",
+                background: "var(--color-primary)",
+                color: "#fff",
+                fontSize: 14,
+                fontWeight: 600,
+                textDecoration: "none",
+                transition: "opacity 0.15s, transform 0.15s",
+                letterSpacing: "0.01em",
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLAnchorElement).style.opacity = "0.88";
+                (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(-1px)";
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLAnchorElement).style.opacity = "1";
+                (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(0)";
+              }}
+            >
+              Start designing
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M5 12h14M12 5l7 7-7 7" />
+              </svg>
+            </Link>
+            <a
+              href="#features"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                padding: "12px 28px",
+                borderRadius: "var(--radius-sm)",
                 border: "1px solid var(--color-border)",
                 background: "var(--color-surface)",
                 color: "var(--color-text-muted)",
-                fontSize: 13,
-                fontFamily: "inherit",
-                cursor: "pointer",
+                fontSize: 14,
+                fontWeight: 500,
+                textDecoration: "none",
                 transition: "border-color 0.15s, color 0.15s",
               }}
               onMouseEnter={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--color-primary)";
-                (e.currentTarget as HTMLButtonElement).style.color = "var(--color-text)";
+                (e.currentTarget as HTMLAnchorElement).style.borderColor = "var(--color-primary)";
+                (e.currentTarget as HTMLAnchorElement).style.color = "var(--color-text)";
               }}
               onMouseLeave={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--color-border)";
-                (e.currentTarget as HTMLButtonElement).style.color = "var(--color-text-muted)";
+                (e.currentTarget as HTMLAnchorElement).style.borderColor = "var(--color-border)";
+                (e.currentTarget as HTMLAnchorElement).style.color = "var(--color-text-muted)";
               }}
             >
-              {ex}
-            </motion.button>
-          ))}
-        </div>
+              See features
+            </a>
+          </div>
+        </motion.div>
 
-        {/* Recent designs */}
-        {history.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.5, duration: 0.4 }}
-            style={{ width: "100%", marginTop: 40 }}
+        {/* Scroll indicator */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1.2, duration: 0.6 }}
+          style={{
+            position: "absolute",
+            bottom: 32,
+            left: "50%",
+            transform: "translateX(-50%)",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 6,
+            color: "var(--color-text-faint)",
+            fontSize: 11,
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+          }}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "bounce 2s infinite" }}>
+            <path d="M12 5v14M5 12l7 7 7-7" />
+          </svg>
+        </motion.div>
+      </section>
+
+      {/* Features */}
+      <section
+        id="features"
+        style={{
+          padding: "80px 24px 100px",
+          maxWidth: 960,
+          margin: "0 auto",
+        }}
+      >
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-60px" }}
+          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+          style={{ textAlign: "center", marginBottom: 56 }}
+        >
+          <p
+            style={{
+              fontSize: 11,
+              fontWeight: 600,
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              color: "var(--color-primary)",
+              marginBottom: 12,
+            }}
           >
-            <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--color-text-faint)", marginBottom: 10 }}>
-              Recent designs
-            </p>
-            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-              {history.map((s) => (
-                <Link
-                  key={s.id}
-                  href={sessionHref(s)}
+            Everything you need
+          </p>
+          <h2
+            className="heading-gradient"
+            style={{
+              fontSize: "clamp(1.6rem, 4vw, 2.2rem)",
+              fontWeight: 700,
+              lineHeight: 1.2,
+              letterSpacing: "-0.02em",
+            }}
+          >
+            A full design loop, end to end
+          </h2>
+        </motion.div>
+
+        <motion.div
+          variants={container}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, margin: "-40px" }}
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+            gap: 1,
+            border: "1px solid var(--color-border)",
+            borderRadius: "var(--radius-lg)",
+            overflow: "hidden",
+            background: "var(--color-border)",
+          }}
+        >
+          {FEATURES.map((f) => (
+            <motion.div
+              key={f.title}
+              variants={item}
+              style={{
+                background: "var(--color-surface)",
+                padding: "28px 28px",
+                display: "flex",
+                flexDirection: "column",
+                gap: 12,
+              }}
+            >
+              <div
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: "var(--radius-sm)",
+                  border: "1px solid var(--color-border)",
+                  background: "var(--color-surface-2)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "var(--color-primary)",
+                  flexShrink: 0,
+                }}
+              >
+                {f.icon}
+              </div>
+              <div>
+                <p
                   style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,
-                    padding: "10px 14px",
-                    borderRadius: "var(--radius-sm)",
-                    border: "1px solid var(--color-border)",
-                    background: "var(--color-surface)",
-                    textDecoration: "none",
-                    transition: "border-color 0.15s",
+                    fontSize: 14,
+                    fontWeight: 600,
+                    color: "var(--color-text)",
+                    marginBottom: 6,
                   }}
-                  onMouseEnter={(e) => ((e.currentTarget as HTMLAnchorElement).style.borderColor = "var(--color-primary)")}
-                  onMouseLeave={(e) => ((e.currentTarget as HTMLAnchorElement).style.borderColor = "var(--color-border)")}
                 >
-                  {/* Status dot */}
-                  <span style={{ width: 7, height: 7, borderRadius: "50%", background: statusColor(s.status), flexShrink: 0 }} />
+                  {f.title}
+                </p>
+                <p
+                  style={{
+                    fontSize: 13,
+                    color: "var(--color-text-muted)",
+                    lineHeight: 1.6,
+                  }}
+                >
+                  {f.description}
+                </p>
+              </div>
+            </motion.div>
+          ))}
+        </motion.div>
+      </section>
 
-                  {/* Problem */}
-                  <span style={{ flex: 1, fontSize: 13, color: "var(--color-text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {s.problem}
-                  </span>
+      {/* CTA section */}
+      <section
+        style={{
+          padding: "0 24px 100px",
+          maxWidth: 960,
+          margin: "0 auto",
+        }}
+      >
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-40px" }}
+          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+          style={{
+            textAlign: "center",
+            padding: "60px 32px",
+            borderRadius: "var(--radius-xl)",
+            border: "1px solid var(--color-border)",
+            background: "var(--color-surface)",
+            position: "relative",
+            overflow: "hidden",
+          }}
+        >
+          <div
+            aria-hidden
+            style={{
+              position: "absolute",
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+              width: 500,
+              height: 300,
+              borderRadius: "50%",
+              background: "radial-gradient(circle, rgba(99,102,241,0.08) 0%, transparent 70%)",
+              filter: "blur(32px)",
+              pointerEvents: "none",
+            }}
+          />
+          <p
+            style={{
+              fontSize: 11,
+              fontWeight: 600,
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              color: "var(--color-primary)",
+              marginBottom: 16,
+            }}
+          >
+            Ready to start?
+          </p>
+          <h2
+            className="heading-gradient"
+            style={{
+              fontSize: "clamp(1.5rem, 4vw, 2rem)",
+              fontWeight: 700,
+              lineHeight: 1.2,
+              letterSpacing: "-0.02em",
+              marginBottom: 16,
+            }}
+          >
+            Design your first system now
+          </h2>
+          <p
+            style={{
+              fontSize: 14,
+              color: "var(--color-text-muted)",
+              marginBottom: 32,
+              maxWidth: 400,
+              margin: "0 auto 32px",
+            }}
+          >
+            Pick any system — URL shortener, Twitter, Netflix — and the AI will walk you through the full architecture.
+          </p>
+          <Link
+            href="/dashboard"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "12px 32px",
+              borderRadius: "var(--radius-sm)",
+              background: "var(--color-primary)",
+              color: "#fff",
+              fontSize: 14,
+              fontWeight: 600,
+              textDecoration: "none",
+              transition: "opacity 0.15s, transform 0.15s",
+            }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLAnchorElement).style.opacity = "0.88";
+              (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(-1px)";
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLAnchorElement).style.opacity = "1";
+              (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(0)";
+            }}
+          >
+            Go to dashboard
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M5 12h14M12 5l7 7-7 7" />
+            </svg>
+          </Link>
+        </motion.div>
+      </section>
 
-                  {/* Score badge */}
-                  {s.overall_score !== null && (
-                    <span style={{ fontSize: 12, fontWeight: 600, color: "var(--color-primary)", flexShrink: 0 }}>
-                      {s.overall_score}/10
-                    </span>
-                  )}
+      {/* Footer */}
+      <footer
+        style={{
+          borderTop: "1px solid var(--color-border)",
+          padding: "20px 28px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: 12,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <LogoMark />
+          <span style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-muted)" }}>
+            Arcwise
+          </span>
+        </div>
+        <p style={{ fontSize: 12, color: "var(--color-text-faint)" }}>
+          AI-powered system design coach
+        </p>
+        <Link
+          href="/settings"
+          style={{ fontSize: 12, color: "var(--color-text-faint)", textDecoration: "none" }}
+          onMouseEnter={(e) => ((e.currentTarget as HTMLAnchorElement).style.color = "var(--color-text-muted)")}
+          onMouseLeave={(e) => ((e.currentTarget as HTMLAnchorElement).style.color = "var(--color-text-faint)")}
+        >
+          Settings
+        </Link>
+      </footer>
 
-                  {/* Status label */}
-                  <span style={{ fontSize: 11, color: statusColor(s.status), flexShrink: 0, minWidth: 60, textAlign: "right" }}>
-                    {statusLabel(s.status)}
-                  </span>
-
-                  {/* Date */}
-                  <span style={{ fontSize: 11, color: "var(--color-text-faint)", flexShrink: 0 }}>
-                    {new Date(s.created_at).toLocaleDateString()}
-                  </span>
-                </Link>
-              ))}
-            </div>
-          </motion.div>
-        )}
-      </motion.div>
+      <style>{`
+        @keyframes bounce {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(4px); }
+        }
+      `}</style>
     </div>
   );
 }

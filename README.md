@@ -99,7 +99,7 @@ Get a structured review across five dimensions — functional coverage, NFR hand
 ### Option A — Docker (recommended)
 
 ```bash
-git clone https://github.com/your-org/arcwise.git
+git clone https://github.com/nithiin7/arcwise.git
 cd arcwise
 
 # Add your Anthropic API key

@@ -2,32 +2,10 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import ChevronDown from "@/components/icons/ChevronDown";
+import type { ComponentJustificationsProps } from "@/types";
 
-interface Props {
-  justifications: Record<string, string>;
-}
-
-function ChevronDown() {
-  return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 14 14"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <path
-        d="M3 5l4 4 4-4"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-export function ComponentJustifications({ justifications }: Props) {
+export function ComponentJustifications({ justifications }: ComponentJustificationsProps) {
   const [open, setOpen] = useState(false);
   const entries = Object.entries(justifications);
 

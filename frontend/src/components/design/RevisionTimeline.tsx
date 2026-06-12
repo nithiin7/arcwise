@@ -2,43 +2,14 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import type { Revision } from "@/types";
+import type { RevisionTimelineProps, RevisionEntry } from "@/types";
+import ChevronDown from "@/components/icons/ChevronDown";
 
-interface Props {
-  revisions: Revision[];
-  onRevert: (index: number) => void;
-  onView: (index: number) => void;
-  viewingIndex: number | null;
-  initialMermaid?: string;
-}
-
-function ChevronDown() {
-  return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 14 14"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <path
-        d="M3 5l4 4 4-4"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-type Entry = { index: number; label: string; canRevert: boolean };
-
-export function RevisionTimeline({ revisions, onRevert, onView, viewingIndex, initialMermaid }: Props) {
+export function RevisionTimeline({ revisions, onRevert, onView, viewingIndex, initialMermaid }: RevisionTimelineProps) {
   const [open, setOpen] = useState(false);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
-  const entries: Entry[] = [];
+  const entries: RevisionEntry[] = [];
   if (initialMermaid) {
     entries.push({ index: -1, label: "Initial design", canRevert: false });
   }

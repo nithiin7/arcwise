@@ -2,14 +2,7 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
-
-interface Props {
-  title?: string;
-  message?: string;
-  reset?: () => void;
-  backHref?: string;
-  backLabel?: string;
-}
+import type { ErrorViewProps } from "@/types";
 
 export default function ErrorView({
   title = "Something went wrong",
@@ -17,7 +10,7 @@ export default function ErrorView({
   reset,
   backHref = "/",
   backLabel = "Go home",
-}: Props) {
+}: ErrorViewProps) {
   return (
     <div
       style={{

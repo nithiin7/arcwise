@@ -73,3 +73,53 @@ export interface Provider {
   docsUrl: string;
   docsLabel: string;
 }
+
+export interface ModelOption {
+  value: string;
+  label: string;
+  size?: string;
+}
+
+export interface ModelGroup {
+  group: string;
+  options: ModelOption[];
+}
+
+export interface OllamaModel {
+  name: string;
+  paramSize: string;
+}
+
+export interface ModelSelectProps {
+  groups: ModelGroup[];
+  value: string;
+  onChange: (value: string) => void;
+}
+
+export interface ErrorViewProps {
+  title?: string;
+  message?: string;
+  reset?: () => void;
+  backHref?: string;
+  backLabel?: string;
+}
+
+export interface ArchitectureCanvasProps {
+  mermaid: string;
+  isLoading: boolean;
+  scaleAssumption?: string;
+}
+
+export interface ComponentJustificationsProps {
+  justifications: Record<string, string>;
+}
+
+export interface RevisionTimelineProps {
+  revisions: Revision[];
+  onRevert: (index: number) => void;
+  onView: (index: number) => void;
+  viewingIndex: number | null;
+  initialMermaid?: string;
+}
+
+export type RevisionEntry = { index: number; label: string; canRevert: boolean };

@@ -4,42 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import mermaidLib from "mermaid";
 import { useSettingsStore } from "@/store/settingsStore";
+import Spinner from "@/components/icons/Spinner";
+import type { ArchitectureCanvasProps } from "@/types";
 
-function Spinner() {
-  return (
-    <svg
-      className="animate-spin"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <circle
-        cx="12"
-        cy="12"
-        r="9"
-        stroke="currentColor"
-        strokeOpacity="0.2"
-        strokeWidth="2.5"
-      />
-      <path
-        d="M21 12a9 9 0 0 0-9-9"
-        stroke="currentColor"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-interface Props {
-  mermaid: string;
-  isLoading: boolean;
-  scaleAssumption?: string;
-}
-
-export function ArchitectureCanvas({ mermaid: diagram, isLoading }: Props) {
+export function ArchitectureCanvas({ mermaid: diagram, isLoading }: ArchitectureCanvasProps) {
   const [svg, setSvg] = useState("");
   const [svgKey, setSvgKey] = useState(0);
   const [error, setError] = useState("");
@@ -73,11 +41,11 @@ export function ArchitectureCanvas({ mermaid: diagram, isLoading }: Props) {
 
   useEffect(() => {
     if (!diagram) return;
-    setError("");
     const id = `mermaid-render-${++renderCountRef.current}`;
     mermaidLib
       .render(id, diagram)
       .then(({ svg: rendered }) => {
+        setError("");
         setSvg(rendered);
         setSvgKey((k) => k + 1);
       })
@@ -127,7 +95,7 @@ export function ArchitectureCanvas({ mermaid: diagram, isLoading }: Props) {
               color: "var(--color-text-muted)",
             }}
           >
-            <Spinner />
+            <Spinner size={24} />
             <span style={{ fontSize: 14 }}>Generating architecture…</span>
           </motion.div>
         )}

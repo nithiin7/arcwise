@@ -1,28 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback, KeyboardEvent } from "react";
+import type { ModelGroup, ModelOption, ModelSelectProps, OllamaModel } from "@/types";
 
-export interface ModelOption {
-  value: string;
-  label: string;
-  size?: string;
-}
-
-export interface ModelGroup {
-  group: string;
-  options: ModelOption[];
-}
-
-interface Props {
-  groups: ModelGroup[];
-  value: string;
-  onChange: (value: string) => void;
-}
-
-interface OllamaModel {
-  name: string;
-  paramSize: string;
-}
+export type { ModelGroup, ModelOption };
 
 function formatModelName(name: string): string {
   // "qwen3:14b" → "qwen3", "llama3.2:latest" → "llama3.2"
@@ -46,7 +27,7 @@ function resolveSize(groups: ModelGroup[], value: string): string | undefined {
   }
 }
 
-export default function ModelSelect({ groups: baseGroups, value, onChange }: Props) {
+export default function ModelSelect({ groups: baseGroups, value, onChange }: ModelSelectProps) {
   const [open, setOpen] = useState(false);
   const [focused, setFocused] = useState<string>(value);
   const [ollamaModels, setOllamaModels] = useState<OllamaModel[] | null>(null);

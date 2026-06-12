@@ -3,8 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import mermaidLib from "mermaid";
-
-let mermaidInitialized = false;
+import { useSettingsStore } from "@/store/settingsStore";
 
 function Spinner() {
   return (
@@ -45,24 +44,32 @@ export function ArchitectureCanvas({ mermaid: diagram, isLoading }: Props) {
   const [svgKey, setSvgKey] = useState(0);
   const [error, setError] = useState("");
   const renderCountRef = useRef(0);
+  const resolvedTheme = useSettingsStore((s) => s.resolvedTheme);
 
   useEffect(() => {
-    if (!mermaidInitialized) {
-      mermaidLib.initialize({
-        startOnLoad: false,
-        theme: "dark",
-        themeVariables: {
-          background: "#18181b",
-          primaryColor: "#6366f1",
-          primaryBorderColor: "#4f46e5",
-          primaryTextColor: "#f4f4f5",
-          lineColor: "#52525b",
-          secondaryColor: "#27272a",
-        },
-      });
-      mermaidInitialized = true;
-    }
-  }, []);
+    const isDark = resolvedTheme === "dark";
+    mermaidLib.initialize({
+      startOnLoad: false,
+      theme: isDark ? "dark" : "default",
+      themeVariables: isDark
+        ? {
+            background: "#18181b",
+            primaryColor: "#6366f1",
+            primaryBorderColor: "#4f46e5",
+            primaryTextColor: "#f4f4f5",
+            lineColor: "#52525b",
+            secondaryColor: "#27272a",
+          }
+        : {
+            background: "#ffffff",
+            primaryColor: "#6366f1",
+            primaryBorderColor: "#4f46e5",
+            primaryTextColor: "#18181b",
+            lineColor: "#a1a1aa",
+            secondaryColor: "#f4f4f5",
+          },
+    });
+  }, [resolvedTheme]);
 
   useEffect(() => {
     if (!diagram) return;
@@ -77,7 +84,7 @@ export function ArchitectureCanvas({ mermaid: diagram, isLoading }: Props) {
       .catch((err: unknown) => {
         setError(err instanceof Error ? err.message : "Failed to render diagram");
       });
-  }, [diagram]);
+  }, [diagram, resolvedTheme]);
 
   return (
     <div
@@ -95,7 +102,7 @@ export function ArchitectureCanvas({ mermaid: diagram, isLoading }: Props) {
           position: "absolute",
           inset: 0,
           backgroundImage:
-            "radial-gradient(circle, rgba(255,255,255,0.03) 1px, transparent 1px)",
+            `radial-gradient(circle, var(--color-border) 1px, transparent 1px)`,
           backgroundSize: "24px 24px",
           pointerEvents: "none",
         }}

@@ -219,16 +219,13 @@ export default function HomePage() {
 
         {/* Headline */}
         <h1
+          className="heading-gradient"
           style={{
             fontSize: "clamp(2rem, 5vw, 2.75rem)",
             fontWeight: 700,
             lineHeight: 1.15,
             textAlign: "center",
             marginBottom: 12,
-            background: "linear-gradient(180deg, #f4f4f5 0%, rgba(244,244,245,0.55) 100%)",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
-            backgroundClip: "text",
           }}
         >
           What will you design today?
@@ -381,7 +378,7 @@ export default function HomePage() {
         )}
 
         {/* Example pills */}
-        <div className="flex flex-wrap justify-center gap-2 mt-5">
+        <div className="flex flex-wrap justify-center gap-2" style={{ marginTop: 16 }}>
           {EXAMPLES.map((ex, i) => (
             <motion.button
               key={ex}

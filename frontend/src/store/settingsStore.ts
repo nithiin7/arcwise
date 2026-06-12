@@ -11,9 +11,15 @@ interface ProviderKeys {
   groqKey: string;
 }
 
+type Theme = "light" | "dark" | "system";
+
 interface SettingsState extends ProviderKeys {
+  theme: Theme;
+  resolvedTheme: "light" | "dark";
   setKey: (field: keyof ProviderKeys, value: string) => void;
   getKeyForModel: (model: string) => string;
+  setTheme: (theme: Theme) => void;
+  setResolvedTheme: (theme: "light" | "dark") => void;
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -24,8 +30,12 @@ export const useSettingsStore = create<SettingsState>()(
       geminiKey: "",
       xaiKey: "",
       groqKey: "",
+      theme: "system",
+      resolvedTheme: "light",
 
       setKey: (field, value) => set({ [field]: value }),
+      setTheme: (theme) => set({ theme }),
+      setResolvedTheme: (resolvedTheme) => set({ resolvedTheme }),
 
       getKeyForModel: (model) => {
         const s = get();
@@ -46,6 +56,14 @@ export const useSettingsStore = create<SettingsState>()(
     {
       name: "arcwise-settings",
       storage: createJSONStorage(() => localStorage),
+      partialize: (s) => ({
+        anthropicKey: s.anthropicKey,
+        openaiKey: s.openaiKey,
+        geminiKey: s.geminiKey,
+        xaiKey: s.xaiKey,
+        groqKey: s.groqKey,
+        theme: s.theme,
+      }),
     }
   )
 );

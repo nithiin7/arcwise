@@ -10,8 +10,32 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Arcwise",
-  description: "AI-powered system design coach",
+  title: {
+    default: "Arcwise — AI System Design Coach",
+    template: "%s | Arcwise",
+  },
+  description:
+    "Master system design with an AI coach. Get clarifying questions, architecture diagrams, iterative refinement, and scored reviews — all in one flow.",
+  keywords: ["system design", "AI", "architecture", "interview prep", "software engineering"],
+  openGraph: {
+    title: "Arcwise — AI System Design Coach",
+    description:
+      "Master system design with an AI coach. Get architecture diagrams, iterative refinement, and scored reviews.",
+    type: "website",
+    siteName: "Arcwise",
+  },
+  twitter: {
+    card: "summary",
+    title: "Arcwise — AI System Design Coach",
+    description: "Master system design with an AI coach. Architecture diagrams, refinement, and scored reviews.",
+  },
+  icons: {
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/favicon.ico" },
+    ],
+    shortcut: "/favicon.ico",
+  },
 };
 
 const themeScript = `

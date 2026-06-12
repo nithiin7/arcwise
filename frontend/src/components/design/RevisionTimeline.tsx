@@ -7,6 +7,9 @@ import type { Revision } from "@/types";
 interface Props {
   revisions: Revision[];
   onRevert: (index: number) => void;
+  onView: (index: number) => void;
+  viewingIndex: number | null;
+  initialMermaid?: string;
 }
 
 function ChevronDown() {
@@ -29,9 +32,19 @@ function ChevronDown() {
   );
 }
 
-export function RevisionTimeline({ revisions, onRevert }: Props) {
+type Entry = { index: number; label: string; canRevert: boolean };
+
+export function RevisionTimeline({ revisions, onRevert, onView, viewingIndex, initialMermaid }: Props) {
   const [open, setOpen] = useState(false);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+
+  const entries: Entry[] = [];
+  if (initialMermaid) {
+    entries.push({ index: -1, label: "Initial design", canRevert: false });
+  }
+  revisions.forEach((rev, i) => {
+    entries.push({ index: i, label: rev.diff_summary, canRevert: true });
+  });
 
   return (
     <div style={{ borderTop: "1px solid var(--color-border)" }}>
@@ -52,7 +65,7 @@ export function RevisionTimeline({ revisions, onRevert }: Props) {
           fontFamily: "inherit",
         }}
       >
-        <span>Revision History ({revisions.length})</span>
+        <span>History ({entries.length})</span>
         <motion.span
           animate={{ rotate: open ? 180 : 0 }}
           transition={{ duration: 0.2 }}
@@ -72,63 +85,92 @@ export function RevisionTimeline({ revisions, onRevert }: Props) {
             style={{ overflow: "hidden" }}
           >
             <div style={{ padding: "4px 16px 12px" }}>
-              {revisions.map((rev, i) => (
-                <div
-                  key={i}
-                  onMouseEnter={() => setHoveredIndex(i)}
-                  onMouseLeave={() => setHoveredIndex(null)}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                    padding: "5px 0",
-                  }}
-                >
+              {entries.map(({ index, label, canRevert }) => {
+                const isViewing = viewingIndex === index;
+                return (
                   <div
+                    key={index}
+                    onMouseEnter={() => setHoveredIndex(index)}
+                    onMouseLeave={() => setHoveredIndex(null)}
                     style={{
-                      width: 6,
-                      height: 6,
-                      borderRadius: "50%",
-                      background: "var(--color-primary)",
-                      flexShrink: 0,
-                    }}
-                  />
-                  <span
-                    style={{
-                      flex: 1,
-                      fontSize: 12,
-                      color: "var(--color-text-muted)",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      padding: "5px 0",
                     }}
                   >
-                    {rev.diff_summary}
-                  </span>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onRevert(i);
-                    }}
-                    style={{
-                      opacity: hoveredIndex === i ? 1 : 0,
-                      fontSize: 11,
-                      fontWeight: 500,
-                      color: "var(--color-text-faint)",
-                      background: "var(--color-surface-offset)",
-                      border: "none",
-                      borderRadius: "var(--radius-sm)",
-                      padding: "2px 8px",
-                      cursor: "pointer",
-                      fontFamily: "inherit",
-                      transition: "opacity 0.15s",
-                      flexShrink: 0,
-                    }}
-                  >
-                    revert
-                  </button>
-                </div>
-              ))}
+                    <div
+                      style={{
+                        width: 6,
+                        height: 6,
+                        borderRadius: "50%",
+                        background: isViewing ? "var(--color-primary)" : "var(--color-border)",
+                        flexShrink: 0,
+                        transition: "background 0.15s",
+                      }}
+                    />
+                    <span
+                      style={{
+                        flex: 1,
+                        fontSize: 12,
+                        color: isViewing ? "var(--color-text)" : "var(--color-text-muted)",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                        transition: "color 0.15s",
+                      }}
+                    >
+                      {label}
+                    </span>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onView(index);
+                      }}
+                      style={{
+                        opacity: hoveredIndex === index || isViewing ? 1 : 0,
+                        fontSize: 11,
+                        fontWeight: 500,
+                        color: isViewing ? "var(--color-primary)" : "var(--color-text-faint)",
+                        background: "var(--color-surface-offset)",
+                        border: "none",
+                        borderRadius: "var(--radius-sm)",
+                        padding: "2px 8px",
+                        cursor: "pointer",
+                        fontFamily: "inherit",
+                        transition: "opacity 0.15s",
+                        flexShrink: 0,
+                      }}
+                    >
+                      {isViewing ? "viewing" : "view"}
+                    </button>
+                    {canRevert && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onRevert(index);
+                        }}
+                        style={{
+                          opacity: hoveredIndex === index ? 1 : 0,
+                          fontSize: 11,
+                          fontWeight: 500,
+                          color: "var(--color-text-faint)",
+                          background: "var(--color-surface-offset)",
+                          border: "none",
+                          borderRadius: "var(--radius-sm)",
+                          padding: "2px 8px",
+                          cursor: "pointer",
+                          fontFamily: "inherit",
+                          transition: "opacity 0.15s",
+                          flexShrink: 0,
+                        }}
+                      >
+                        revert
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </motion.div>
         )}

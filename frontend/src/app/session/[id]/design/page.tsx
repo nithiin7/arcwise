@@ -95,6 +95,7 @@ export default function DesignPage() {
   const [isSending, setIsSending] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [inputValue, setInputValue] = useState("");
+  const [previewIndex, setPreviewIndex] = useState<number | null>(null);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -140,6 +141,24 @@ export default function DesignPage() {
 
   const arch = session.architecture;
   const currentMermaid = arch.final_mermaid || arch.llm_suggested_mermaid || "";
+
+  const displayedMermaid =
+    previewIndex === null
+      ? currentMermaid
+      : previewIndex === -1
+      ? arch.llm_suggested_mermaid
+      : arch.revisions[previewIndex]?.updated_mermaid ?? currentMermaid;
+
+  const previewLabel =
+    previewIndex === -1
+      ? "Initial design"
+      : previewIndex !== null
+      ? arch.revisions[previewIndex]?.diff_summary
+      : null;
+
+  function handleView(index: number) {
+    setPreviewIndex((prev) => (prev === index ? null : index));
+  }
 
   async function handleSend() {
     const msg = inputValue.trim();
@@ -189,6 +208,7 @@ export default function DesignPage() {
     try {
       const result = await api.revertRevision(sessionId, index);
       updateArchitectureMermaid(result.mermaid);
+      setPreviewIndex(null);
     } catch (err) {
       console.error(err);
     }
@@ -298,9 +318,53 @@ export default function DesignPage() {
       {/* Body */}
       <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
         {/* Diagram area */}
-        <div style={{ flex: 1, overflow: "hidden" }}>
+        <div style={{ flex: 1, overflow: "hidden", position: "relative" }}>
+          {previewIndex !== null && (
+            <div
+              style={{
+                position: "absolute",
+                top: 10,
+                left: "50%",
+                transform: "translateX(-50%)",
+                zIndex: 10,
+                background: "var(--color-surface)",
+                border: "1px solid var(--color-border)",
+                borderRadius: "var(--radius-md)",
+                padding: "5px 10px 5px 14px",
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                fontSize: 12,
+                color: "var(--color-text-muted)",
+                fontFamily: "inherit",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+                whiteSpace: "nowrap",
+                maxWidth: "calc(100% - 32px)",
+              }}
+            >
+              <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
+                Viewing: <strong style={{ color: "var(--color-text)" }}>{previewLabel}</strong>
+              </span>
+              <button
+                onClick={() => setPreviewIndex(null)}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "var(--color-text-faint)",
+                  fontSize: 16,
+                  lineHeight: 1,
+                  padding: "0 2px",
+                  flexShrink: 0,
+                  fontFamily: "inherit",
+                }}
+              >
+                ×
+              </button>
+            </div>
+          )}
           <ArchitectureCanvas
-            mermaid={currentMermaid}
+            mermaid={displayedMermaid}
             isLoading={isCanvasLoading}
             scaleAssumption={arch.scale_assumption}
           />
@@ -446,6 +510,9 @@ export default function DesignPage() {
             <RevisionTimeline
               revisions={arch.revisions}
               onRevert={handleRevert}
+              onView={handleView}
+              viewingIndex={previewIndex}
+              initialMermaid={arch.llm_suggested_mermaid}
             />
           )}
 

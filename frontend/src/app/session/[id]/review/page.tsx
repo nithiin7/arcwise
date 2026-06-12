@@ -5,7 +5,7 @@ import { useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import * as api from "@/lib/api";
+import * as api from "@/api";
 import { useSessionStore } from "@/store/sessionStore";
 import { scoreColor } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";

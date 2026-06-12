@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback, KeyboardEvent } from "react";
+import { getOllamaModels } from "@/api/ollama";
 import type { ModelGroup, ModelOption, ModelSelectProps, OllamaModel } from "@/types";
 
 export type { ModelGroup, ModelOption };
@@ -35,21 +36,7 @@ export default function ModelSelect({ groups: baseGroups, value, onChange }: Mod
   const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    fetch("http://localhost:11434/api/tags")
-      .then((r) => r.json())
-      .then((data) => {
-        const models: OllamaModel[] = (data.models ?? [])
-          .filter((m: { name: string; details?: { family?: string } }) => {
-            const family = (m.details?.family ?? "").toLowerCase();
-            return !family.includes("bert") && !m.name.toLowerCase().includes("embed");
-          })
-          .map((m: { name: string; details?: { parameter_size?: string } }) => ({
-            name: m.name,
-            paramSize: m.details?.parameter_size ?? "",
-          }));
-        setOllamaModels(models);
-      })
-      .catch(() => setOllamaModels([]));
+    getOllamaModels().then(setOllamaModels);
   }, []);
 
   const groups: ModelGroup[] = baseGroups

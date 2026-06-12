@@ -1,133 +1,39 @@
-import type { Review } from "@/types";
+import axios from "axios";
+import type { AxiosRequestConfig } from "axios";
 
-const BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api";
+const client = axios.create({
+  baseURL: process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api",
+  headers: { "Content-Type": "application/json" },
+});
 
-async function request<T>(
-  path: string,
-  options?: RequestInit,
-): Promise<T> {
-  const res = await fetch(`${BASE_URL}${path}`, {
-    headers: { "Content-Type": "application/json" },
-    ...options,
-  });
-
-  if (!res.ok) {
-    let detail = res.statusText;
-    try {
-      const body = await res.json();
-      if (typeof body.detail === "string") detail = body.detail;
-    } catch {
-      // ignore parse errors
-    }
-    throw new Error(detail);
-  }
-
-  return res.json() as Promise<T>;
-}
-
-export interface CreateSessionResponse {
-  session_id: string;
-  problem: string;
-  model: string;
-  questions: Array<{ question: string; options: string[] }>;
-}
-
-export function createSession(
-  problem: string,
-  model: string,
-  apiKey?: string,
-): Promise<CreateSessionResponse> {
-  return request<CreateSessionResponse>("/sessions", {
-    method: "POST",
-    body: JSON.stringify({ problem, model, api_key: apiKey || null }),
-  });
-}
-
-export interface SuggestArchitectureResponse {
-  explanation: string;
-  mermaid_dsl: string;
-  component_justifications: Record<string, string>;
-  scale_assumption: string;
-}
-
-export function submitClarifications(
-  sessionId: string,
-  answers: string[],
-  userScale?: string,
-): Promise<void> {
-  return request<void>(`/sessions/${sessionId}/clarify`, {
-    method: "POST",
-    body: JSON.stringify({ answers, user_scale: userScale }),
-  });
-}
-
-export function suggestArchitecture(
-  sessionId: string,
-): Promise<SuggestArchitectureResponse> {
-  return request<SuggestArchitectureResponse>(
-    `/sessions/${sessionId}/architecture/suggest`,
-    { method: "POST" },
+client.interceptors.response.use(undefined, (err) => {
+  const detail = err.response?.data?.detail;
+  return Promise.reject(
+    new Error(typeof detail === "string" ? detail : (err.response?.statusText ?? err.message)),
   );
+});
+
+export async function get<T>(path: string, config?: AxiosRequestConfig): Promise<T> {
+  const r = await client.get<T>(path, config);
+  return r.data;
 }
 
-export interface RefineArchitectureResponse {
-  updated_mermaid: string;
-  diff_summary: string;
-  revision_index: number;
+export async function post<T>(path: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> {
+  const r = await client.post<T>(path, data, config);
+  return r.data;
 }
 
-export function refineArchitecture(
-  sessionId: string,
-  message: string,
-): Promise<RefineArchitectureResponse> {
-  return request<RefineArchitectureResponse>(
-    `/sessions/${sessionId}/architecture/refine`,
-    { method: "POST", body: JSON.stringify({ message }) },
-  );
+export async function put<T>(path: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> {
+  const r = await client.put<T>(path, data, config);
+  return r.data;
 }
 
-export interface RevertRevisionResponse {
-  mermaid: string;
+export async function patch<T>(path: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> {
+  const r = await client.patch<T>(path, data, config);
+  return r.data;
 }
 
-export function revertRevision(
-  sessionId: string,
-  revisionIndex: number,
-): Promise<RevertRevisionResponse> {
-  return request<RevertRevisionResponse>(
-    `/sessions/${sessionId}/architecture/revert`,
-    { method: "POST", body: JSON.stringify({ revision_index: revisionIndex }) },
-  );
-}
-
-export function submitArchitecture(
-  sessionId: string,
-  userDescription?: string,
-): Promise<void> {
-  return request<void>(`/sessions/${sessionId}/architecture/submit`, {
-    method: "POST",
-    body: JSON.stringify({ user_description: userDescription }),
-  });
-}
-
-export function reviewDesign(sessionId: string): Promise<Review> {
-  return request<Review>(`/sessions/${sessionId}/review`, { method: "POST" });
-}
-
-export function getOllamaModels(): Promise<{ models: string[] }> {
-  return request<{ models: string[] }>("/models/ollama");
-}
-
-export interface SessionSummary {
-  id: string;
-  problem: string;
-  model: string;
-  status: "clarifying" | "designing" | "reviewing" | "complete";
-  overall_score: number | null;
-  created_at: string;
-}
-
-export function listSessions(): Promise<SessionSummary[]> {
-  return request<SessionSummary[]>("/sessions");
+export async function del<T>(path: string, config?: AxiosRequestConfig): Promise<T> {
+  const r = await client.delete<T>(path, config);
+  return r.data;
 }

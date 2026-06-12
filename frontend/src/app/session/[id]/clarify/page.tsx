@@ -8,7 +8,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
-import * as api from "@/lib/api";
+import * as api from "@/api";
 import { clarifyStepSchema, type ClarifyStepForm } from "@/lib/schemas";
 import { useSessionStore } from "@/store/sessionStore";
 import { Button } from "@/components/ui/Button";

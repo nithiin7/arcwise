@@ -9,7 +9,7 @@ import { useParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
-import * as api from "@/lib/api";
+import * as api from "@/api";
 import { chatMessageSchema, type ChatMessageForm } from "@/lib/schemas";
 import { useSessionStore } from "@/store/sessionStore";
 import type { Revision } from "@/types";

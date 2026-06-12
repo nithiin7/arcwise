@@ -8,24 +8,11 @@ import { toast } from "sonner";
 import * as api from "@/lib/api";
 import { useSessionStore } from "@/store/sessionStore";
 import { scoreColor } from "@/lib/utils";
-import type { Scores } from "@/types";
 import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
 import BackArrow from "@/components/icons/BackArrow";
 import Spinner from "@/components/icons/Spinner";
-
-const SCORE_KEYS: { key: keyof Scores; label: string }[] = [
-  { key: "functional_coverage", label: "Functional" },
-  { key: "nfr_handling", label: "NFR Handling" },
-  { key: "component_justification", label: "Component" },
-  { key: "tradeoff_awareness", label: "Tradeoffs" },
-  { key: "overall", label: "Overall" },
-];
-
-const PRIORITY_COLORS: Record<string, { bg: string; text: string }> = {
-  high: { bg: "rgba(239,68,68,0.12)", text: "#ef4444" },
-  medium: { bg: "rgba(245,158,11,0.12)", text: "#f59e0b" },
-  low: { bg: "rgba(34,197,94,0.12)", text: "#22c55e" },
-};
+import { SCORE_KEYS, PRIORITY_COLORS } from "@/constants/review";
 
 export default function ReviewPage() {
   const router = useRouter();
@@ -208,14 +195,7 @@ export default function ReviewPage() {
           >
             Feedback
           </p>
-          <div
-            style={{
-              background: "var(--color-surface)",
-              border: "1px solid var(--color-border)",
-              borderRadius: "var(--radius-md)",
-              padding: "16px 18px",
-            }}
-          >
+          <Card style={{ padding: "16px 18px" }}>
             <p
               style={{
                 fontSize: 14,
@@ -226,7 +206,7 @@ export default function ReviewPage() {
             >
               {feedback}
             </p>
-          </div>
+          </Card>
         </div>
 
         {/* Strengths & Gaps */}
@@ -239,14 +219,7 @@ export default function ReviewPage() {
           }}
         >
           {/* Strengths */}
-          <div
-            style={{
-              background: "var(--color-surface)",
-              border: "1px solid var(--color-border)",
-              borderRadius: "var(--radius-md)",
-              padding: "16px 18px",
-            }}
-          >
+          <Card style={{ padding: "16px 18px" }}>
             <p
               style={{
                 fontSize: 13,
@@ -269,17 +242,10 @@ export default function ReviewPage() {
                 </li>
               ))}
             </ul>
-          </div>
+          </Card>
 
           {/* Gaps */}
-          <div
-            style={{
-              background: "var(--color-surface)",
-              border: "1px solid var(--color-border)",
-              borderRadius: "var(--radius-md)",
-              padding: "16px 18px",
-            }}
-          >
+          <Card style={{ padding: "16px 18px" }}>
             <p
               style={{
                 fontSize: 13,
@@ -302,7 +268,7 @@ export default function ReviewPage() {
                 </li>
               ))}
             </ul>
-          </div>
+          </Card>
         </div>
 
         {/* Improvements */}
@@ -329,13 +295,8 @@ export default function ReviewPage() {
                     initial={{ opacity: 0, x: -8 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1], delay: i * 0.07 }}
-                    style={{
-                      background: "var(--color-surface)",
-                      border: "1px solid var(--color-border)",
-                      borderRadius: "var(--radius-md)",
-                      padding: "14px 16px",
-                    }}
                   >
+                  <Card style={{ padding: "14px 16px" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
                       <span
                         style={{
@@ -393,6 +354,7 @@ export default function ReviewPage() {
                         ))}
                       </div>
                     )}
+                  </Card>
                   </motion.div>
                 );
               })}
@@ -402,14 +364,7 @@ export default function ReviewPage() {
 
         {/* Reference note */}
         {reference_architecture_note && (
-          <div
-            style={{
-              background: "var(--color-surface)",
-              border: "1px solid var(--color-border)",
-              borderRadius: "var(--radius-md)",
-              padding: "12px 16px",
-            }}
-          >
+          <Card style={{ padding: "12px 16px" }}>
             <p
               style={{ fontSize: 12, color: "var(--color-text-faint)", lineHeight: 1.6, margin: 0 }}
             >
@@ -418,7 +373,7 @@ export default function ReviewPage() {
               </span>{" "}
               {reference_architecture_note}
             </p>
-          </div>
+          </Card>
         )}
       </div>
     </div>

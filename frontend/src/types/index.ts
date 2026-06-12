@@ -65,3 +65,11 @@ export interface ChatMessage {
   diff_summary?: string;
   timestamp: Date;
 }
+
+export interface Provider {
+  label: string;
+  field: "anthropicKey" | "openaiKey" | "geminiKey" | "xaiKey" | "groqKey";
+  models: string;
+  docsUrl: string;
+  docsLabel: string;
+}

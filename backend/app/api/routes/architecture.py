@@ -14,16 +14,16 @@ async def architecture_suggest(
     session: Session = Depends(get_session_or_404),
 ) -> dict:
     result = await suggest_architecture(session)
-    session.architecture.llm_suggested_mermaid = result["mermaid_dsl"]
-    session.architecture.llm_explanation = result["explanation"]
-    session.architecture.component_justifications = result["component_justifications"]
-    session.architecture.scale_assumption = result["scale_assumption"]
+    session.architecture.llm_suggested_mermaid = result.get("mermaid_dsl", "")
+    session.architecture.llm_explanation = result.get("explanation", "")
+    session.architecture.component_justifications = result.get("component_justifications", {})
+    session.architecture.scale_assumption = result.get("scale_assumption", "")
     await save_session(session)
     return {
-        "explanation": result["explanation"],
-        "mermaid_dsl": result["mermaid_dsl"],
-        "component_justifications": result["component_justifications"],
-        "scale_assumption": result["scale_assumption"],
+        "explanation": result.get("explanation", ""),
+        "mermaid_dsl": result.get("mermaid_dsl", ""),
+        "component_justifications": result.get("component_justifications", {}),
+        "scale_assumption": result.get("scale_assumption", ""),
     }
 
 

@@ -1,10 +1,16 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation } from "@tanstack/react-query";
+import { motion, AnimatePresence } from "framer-motion";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useParams } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
+
 import * as api from "@/lib/api";
+import { chatMessageSchema, type ChatMessageForm } from "@/lib/schemas";
 import { useSessionStore } from "@/store/sessionStore";
 import type { Revision } from "@/types";
 import { ArchitectureCanvas } from "@/components/design/ArchitectureCanvas";
@@ -47,51 +53,121 @@ export default function DesignPage() {
   const addChatMessage = useSessionStore((s) => s.addChatMessage);
   const setSession = useSessionStore((s) => s.setSession);
 
-  const [isCanvasLoading, setIsCanvasLoading] = useState(false);
-  const [isSending, setIsSending] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [inputValue, setInputValue] = useState("");
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputFocusRef = useRef<HTMLInputElement | null>(null);
+
+  const {
+    register,
+    handleSubmit: rhfSubmit,
+    reset: resetChat,
+    formState: { isValid: isChatValid },
+  } = useForm<ChatMessageForm>({
+    resolver: zodResolver(chatMessageSchema),
+    mode: "onChange",
+    defaultValues: { message: "" },
+  });
+
+  const { ref: msgRefCallback, ...msgRegister } = register("message");
+
+  const mergedInputRef = useCallback(
+    (el: HTMLInputElement | null) => {
+      inputFocusRef.current = el;
+      msgRefCallback(el);
+    },
+    [msgRefCallback]
+  );
 
   useEffect(() => {
-    if (!session) {
-      router.replace("/");
-    }
+    if (!session) router.replace("/");
   }, [session, router]);
+
+  const suggestMutation = useMutation({
+    mutationFn: () => api.suggestArchitecture(sessionId),
+    onSuccess: (result) => {
+      setSession({
+        ...session!,
+        architecture: {
+          ...session!.architecture,
+          llm_suggested_mermaid: result.mermaid_dsl,
+          llm_explanation: result.explanation,
+          component_justifications: result.component_justifications,
+          scale_assumption: result.scale_assumption,
+          final_mermaid: result.mermaid_dsl,
+        },
+        status: "designing",
+      });
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : "Failed to generate architecture.");
+    },
+  });
 
   useEffect(() => {
     if (!session) return;
     if (session.architecture.llm_suggested_mermaid) return;
-
-    setIsCanvasLoading(true);
-    api
-      .suggestArchitecture(sessionId)
-      .then((result) => {
-        setSession({
-          ...session,
-          architecture: {
-            ...session.architecture,
-            llm_suggested_mermaid: result.mermaid_dsl,
-            llm_explanation: result.explanation,
-            component_justifications: result.component_justifications,
-            scale_assumption: result.scale_assumption,
-            final_mermaid: result.mermaid_dsl,
-          },
-          status: "designing",
-        });
-      })
-      .catch(console.error)
-      .finally(() => setIsCanvasLoading(false));
-    // Only on mount
+    suggestMutation.mutate();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatMessages]);
+
+  const refineMutation = useMutation({
+    mutationFn: (message: string) => api.refineArchitecture(sessionId, message),
+    onSuccess: (result, message) => {
+      addChatMessage({
+        role: "assistant",
+        content: "I've updated the architecture based on your feedback.",
+        diff_summary: result.diff_summary,
+        timestamp: new Date(),
+      });
+      updateArchitectureMermaid(result.updated_mermaid);
+      const latest = useSessionStore.getState().session;
+      if (latest) {
+        const newRevision: Revision = {
+          user_message: message,
+          updated_mermaid: result.updated_mermaid,
+          diff_summary: result.diff_summary,
+          timestamp: new Date().toISOString(),
+        };
+        setSession({
+          ...latest,
+          architecture: {
+            ...latest.architecture,
+            revisions: [...latest.architecture.revisions, newRevision],
+          },
+        });
+      }
+      inputFocusRef.current?.focus();
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : "Failed to refine architecture.");
+    },
+  });
+
+  const revertMutation = useMutation({
+    mutationFn: (index: number) => api.revertRevision(sessionId, index),
+    onSuccess: (result) => {
+      updateArchitectureMermaid(result.mermaid);
+      setPreviewIndex(null);
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : "Failed to revert revision.");
+    },
+  });
+
+  const submitMutation = useMutation({
+    mutationFn: () => api.submitArchitecture(sessionId),
+    onSuccess: () => {
+      router.push(`/session/${sessionId}/review`);
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : "Failed to submit architecture.");
+    },
+  });
 
   if (!session) return null;
 
@@ -116,70 +192,10 @@ export default function DesignPage() {
     setPreviewIndex((prev) => (prev === index ? null : index));
   }
 
-  async function handleSend() {
-    const msg = inputValue.trim();
-    if (!msg || isSending) return;
-    setInputValue("");
-    setIsSending(true);
-
-    addChatMessage({ role: "user", content: msg, timestamp: new Date() });
-
-    try {
-      const result = await api.refineArchitecture(sessionId, msg);
-
-      addChatMessage({
-        role: "assistant",
-        content: "I've updated the architecture based on your feedback.",
-        diff_summary: result.diff_summary,
-        timestamp: new Date(),
-      });
-
-      updateArchitectureMermaid(result.updated_mermaid);
-
-      const latest = useSessionStore.getState().session;
-      if (latest) {
-        const newRevision: Revision = {
-          user_message: msg,
-          updated_mermaid: result.updated_mermaid,
-          diff_summary: result.diff_summary,
-          timestamp: new Date().toISOString(),
-        };
-        setSession({
-          ...latest,
-          architecture: {
-            ...latest.architecture,
-            revisions: [...latest.architecture.revisions, newRevision],
-          },
-        });
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsSending(false);
-      inputRef.current?.focus();
-    }
-  }
-
-  async function handleRevert(index: number) {
-    try {
-      const result = await api.revertRevision(sessionId, index);
-      updateArchitectureMermaid(result.mermaid);
-      setPreviewIndex(null);
-    } catch (err) {
-      console.error(err);
-    }
-  }
-
-  async function handleSubmit() {
-    if (!currentMermaid || isSubmitting) return;
-    setIsSubmitting(true);
-    try {
-      await api.submitArchitecture(sessionId);
-      router.push(`/session/${sessionId}/review`);
-    } catch (err) {
-      console.error(err);
-      setIsSubmitting(false);
-    }
+  function handleSend(data: ChatMessageForm) {
+    addChatMessage({ role: "user", content: data.message, timestamp: new Date() });
+    refineMutation.mutate(data.message);
+    resetChat();
   }
 
   return (
@@ -226,8 +242,15 @@ export default function DesignPage() {
           {session.problem}
         </span>
 
-        <Button onClick={handleSubmit} disabled={!currentMermaid || isSubmitting}>
-          {isSubmitting ? <><Spinner /><span>Submitting…</span></> : "Submit for Review →"}
+        <Button onClick={() => submitMutation.mutate()} disabled={!currentMermaid || submitMutation.isPending}>
+          {submitMutation.isPending ? (
+            <>
+              <Spinner />
+              <span>Submitting…</span>
+            </>
+          ) : (
+            "Submit for Review →"
+          )}
         </Button>
       </header>
 
@@ -281,7 +304,7 @@ export default function DesignPage() {
           )}
           <ArchitectureCanvas
             mermaid={displayedMermaid}
-            isLoading={isCanvasLoading}
+            isLoading={suggestMutation.isPending}
             scaleAssumption={arch.scale_assumption}
           />
         </div>
@@ -425,7 +448,7 @@ export default function DesignPage() {
           {arch.revisions.length > 0 && (
             <RevisionTimeline
               revisions={arch.revisions}
-              onRevert={handleRevert}
+              onRevert={(index) => revertMutation.mutate(index)}
               onView={handleView}
               viewingIndex={previewIndex}
               initialMermaid={arch.llm_suggested_mermaid}
@@ -443,26 +466,25 @@ export default function DesignPage() {
             }}
           >
             <Input
-              ref={inputRef}
+              ref={mergedInputRef}
+              {...msgRegister}
               type="text"
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
-                  handleSend();
+                  rhfSubmit(handleSend)();
                 }
               }}
               placeholder="Ask for refinements…"
-              disabled={isSending}
+              disabled={refineMutation.isPending}
               style={{ flex: 1, padding: "8px 10px" }}
             />
             <Button
-              onClick={handleSend}
-              disabled={isSending || !inputValue.trim()}
+              onClick={rhfSubmit(handleSend)}
+              disabled={refineMutation.isPending || !isChatValid}
               style={{ width: 34, height: 34, padding: 0 }}
             >
-              {isSending ? <Spinner /> : <SendIcon />}
+              {refineMutation.isPending ? <Spinner /> : <SendIcon />}
             </Button>
           </div>
         </div>

@@ -1,8 +1,10 @@
 "use client";
 
+import { useMutation } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { motion } from "framer-motion";
+import { toast } from "sonner";
 import * as api from "@/lib/api";
 import { useSessionStore } from "@/store/sessionStore";
 import { scoreColor } from "@/lib/utils";
@@ -32,25 +34,24 @@ export default function ReviewPage() {
 
   const session = useSessionStore((s) => s.session);
   const review = useSessionStore((s) => s.review);
-  const isLoading = useSessionStore((s) => s.isLoading);
   const setReview = useSessionStore((s) => s.setReview);
-  const setLoading = useSessionStore((s) => s.setLoading);
   const reset = useSessionStore((s) => s.reset);
 
   useEffect(() => {
-    if (!session) {
-      router.replace("/");
-    }
+    if (!session) router.replace("/");
   }, [session, router]);
+
+  const reviewMutation = useMutation({
+    mutationFn: () => api.reviewDesign(sessionId),
+    onSuccess: (r) => setReview(r),
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : "Failed to generate review.");
+    },
+  });
 
   useEffect(() => {
     if (!session || review) return;
-    setLoading(true);
-    api
-      .reviewDesign(sessionId)
-      .then((r) => setReview(r))
-      .catch(console.error)
-      .finally(() => setLoading(false));
+    reviewMutation.mutate();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -61,7 +62,7 @@ export default function ReviewPage() {
     router.push("/");
   }
 
-  if (isLoading || !review) {
+  if (reviewMutation.isPending || !review) {
     return (
       <div
         style={{

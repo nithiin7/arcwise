@@ -1,9 +1,13 @@
 "use client";
 
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { KeyboardEvent, useEffect, useRef, useState } from "react";
+import { KeyboardEvent, useState } from "react";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
 
 import ModelSelect from "@/components/ModelSelect";
 import { Button } from "@/components/ui/Button";
@@ -14,6 +18,7 @@ import Spinner from "@/components/icons/Spinner";
 import { DEFAULT_MODEL, EXAMPLES, MODEL_GROUPS } from "@/constants/dashboard";
 import type { SessionSummary } from "@/lib/api";
 import * as api from "@/lib/api";
+import { createSessionSchema, type CreateSessionForm } from "@/lib/schemas";
 import { useSessionStore } from "@/store/sessionStore";
 import { useSettingsStore } from "@/store/settingsStore";
 import type { Session } from "@/types";
@@ -60,31 +65,32 @@ export default function HomePage() {
   const router = useRouter();
   const setSession = useSessionStore((s) => s.setSession);
   const getKeyForModel = useSettingsStore((s) => s.getKeyForModel);
-  const [problem, setProblem] = useState("");
   const [model, setModel] = useState(DEFAULT_MODEL);
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [history, setHistory] = useState<SessionSummary[]>([]);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  useEffect(() => {
-    api
-      .listSessions()
-      .then(setHistory)
-      .catch(() => {});
-  }, []);
+  const {
+    register,
+    handleSubmit: rhfSubmit,
+    setValue,
+    formState: { isValid: isProblemValid },
+  } = useForm<CreateSessionForm>({
+    resolver: zodResolver(createSessionSchema),
+    defaultValues: { problem: "" },
+    mode: "onChange",
+  });
 
   const storedKey = getKeyForModel(model);
   const isLocalModel = model.startsWith("ollama/");
   const missingKey = !storedKey && !isLocalModel;
-  const canSubmit = !!problem.trim() && !loading && !missingKey;
 
-  async function handleSubmit() {
-    if (!canSubmit) return;
-    setError("");
-    setLoading(true);
-    try {
-      const res = await api.createSession(problem.trim(), model, storedKey || undefined);
+  const { data: history = [] } = useQuery({
+    queryKey: ["sessions"],
+    queryFn: api.listSessions,
+  });
+
+  const createMutation = useMutation({
+    mutationFn: (vars: { problem: string; model: string; apiKey?: string }) =>
+      api.createSession(vars.problem, vars.model, vars.apiKey),
+    onSuccess: (res) => {
       const session: Session = {
         id: res.session_id,
         problem: res.problem,
@@ -106,17 +112,22 @@ export default function HomePage() {
       };
       setSession(session);
       router.push(`/session/${res.session_id}/clarify`);
-    } catch (err) {
-      console.error(err);
-      setError(err instanceof Error ? err.message : "Something went wrong.");
-      setLoading(false);
-    }
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : "Something went wrong.");
+    },
+  });
+
+  const canSubmit = isProblemValid && !createMutation.isPending && !missingKey;
+
+  function onFormSubmit(data: CreateSessionForm) {
+    createMutation.mutate({ problem: data.problem, model, apiKey: storedKey || undefined });
   }
 
   function handleKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      handleSubmit();
+      if (canSubmit) rhfSubmit(onFormSubmit)();
     }
   }
 
@@ -229,10 +240,8 @@ export default function HomePage() {
           }}
         >
           <Textarea
-            ref={textareaRef}
+            {...register("problem")}
             rows={3}
-            value={problem}
-            onChange={(e) => setProblem(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="e.g. Design a URL shortener like bit.ly…"
             bordered={false}
@@ -254,10 +263,7 @@ export default function HomePage() {
             <ModelSelect
               groups={MODEL_GROUPS}
               value={model}
-              onChange={(v) => {
-                setModel(v);
-                setError("");
-              }}
+              onChange={(v) => setModel(v)}
             />
 
             {/* Hints */}
@@ -296,18 +302,18 @@ export default function HomePage() {
             {!missingKey && !isLocalModel && <div style={{ flex: 1 }} />}
 
             {/* Submit button */}
-            <Button onClick={handleSubmit} disabled={!canSubmit}>
-              {loading ? <><Spinner /><span>Thinking…</span></> : "Submit ↵"}
+            <Button onClick={rhfSubmit(onFormSubmit)} disabled={!canSubmit}>
+              {createMutation.isPending ? (
+                <>
+                  <Spinner />
+                  <span>Thinking…</span>
+                </>
+              ) : (
+                "Submit ↵"
+              )}
             </Button>
           </div>
         </div>
-
-        {/* Error message */}
-        {error && (
-          <p style={{ color: "#ef4444", fontSize: 13, marginTop: 8, alignSelf: "flex-start" }}>
-            {error}
-          </p>
-        )}
 
         {/* Example pills */}
         <div className="flex flex-wrap justify-center gap-2" style={{ marginTop: 16 }}>
@@ -317,7 +323,7 @@ export default function HomePage() {
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 + i * 0.05, duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-              onClick={() => setProblem(ex)}
+              onClick={() => setValue("problem", ex)}
               style={{
                 padding: "6px 14px",
                 borderRadius: 999,

@@ -1,9 +1,15 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
+
 import * as api from "@/lib/api";
+import { clarifyStepSchema, type ClarifyStepForm } from "@/lib/schemas";
 import { useSessionStore } from "@/store/sessionStore";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -21,78 +27,98 @@ export default function ClarifyPage() {
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<string[]>(() => Array(questions.length).fill(""));
   const [userScale, setUserScale] = useState("");
-  const [loading, setLoading] = useState(false);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const textareaFocusRef = useRef<HTMLTextAreaElement | null>(null);
   const scaleInputRef = useRef<HTMLInputElement>(null);
 
+  const {
+    register,
+    getValues,
+    setValue,
+    reset: resetStep,
+    formState: { isValid: isStepValid },
+  } = useForm<ClarifyStepForm>({
+    resolver: zodResolver(clarifyStepSchema),
+    mode: "onChange",
+    defaultValues: { answer: "" },
+  });
+
+  const { ref: rhfRef, ...answerProps } = register("answer");
+
+  const answerRef = useCallback(
+    (el: HTMLTextAreaElement | null) => {
+      textareaFocusRef.current = el;
+      rhfRef(el);
+    },
+    [rhfRef]
+  );
+
   useEffect(() => {
-    if (!session) {
-      router.replace("/");
-    }
+    if (!session) router.replace("/");
   }, [session, router]);
 
   useEffect(() => {
     if (step < questions.length) {
-      textareaRef.current?.focus();
+      textareaFocusRef.current?.focus();
     } else {
       scaleInputRef.current?.focus();
     }
   }, [step, questions.length]);
 
-  if (!session) return null;
-
-  const isLastQuestion = step === questions.length - 1;
-  const isScaleStep = step === questions.length;
-  const currentAnswer = step < questions.length ? answers[step] : "";
-
-  function updateAnswer(value: string) {
-    setAnswers((prev) => {
-      const next = [...prev];
-      next[step] = value;
-      return next;
-    });
-  }
-
-  function handleBack() {
-    if (step > 0) setStep((s) => s - 1);
-  }
-
-  async function handleNext() {
-    if (isScaleStep) {
-      await handleFinalSubmit();
-      return;
-    }
-    if (!answers[step].trim()) return;
-    if (isLastQuestion) {
-      setStep((s) => s + 1);
-      return;
-    }
-    setStep((s) => s + 1);
-  }
-
-  async function handleFinalSubmit() {
-    if (loading) return;
-    setLoading(true);
-    try {
-      await api.submitClarifications(
-        session!.id,
-        answers,
-        userScale.trim() || undefined,
-      );
+  const submitMutation = useMutation({
+    mutationFn: (vars: { answers: string[]; userScale?: string }) =>
+      api.submitClarifications(session!.id, vars.answers, vars.userScale),
+    onSuccess: (_, vars) => {
       setSession({
         ...session!,
         clarifications: session!.clarifications.map((c, i) => ({
           question: c.question,
-          answer: answers[i] ?? "",
+          answer: vars.answers[i] ?? "",
         })),
-        user_scale: userScale.trim() || undefined,
+        user_scale: vars.userScale,
         status: "designing",
       });
       router.push(`/session/${session!.id}/design`);
-    } catch (err) {
-      console.error(err);
-      setLoading(false);
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : "Something went wrong.");
+    },
+  });
+
+  if (!session) return null;
+
+  const isScaleStep = step === questions.length;
+
+  function handleBack() {
+    if (step === 0) return;
+    if (!isScaleStep) {
+      const val = getValues("answer");
+      setAnswers((prev) => {
+        const next = [...prev];
+        next[step] = val;
+        return next;
+      });
     }
+    const prevStep = step - 1;
+    setStep(prevStep);
+    resetStep({ answer: answers[prevStep] || "" });
+  }
+
+  function handleNext() {
+    if (isScaleStep) {
+      submitMutation.mutate({ answers, userScale: userScale.trim() || undefined });
+      return;
+    }
+    if (!isStepValid) return;
+    const val = getValues("answer");
+    const nextStep = step + 1;
+    setAnswers((prev) => {
+      const next = [...prev];
+      next[step] = val;
+      return next;
+    });
+    setStep(nextStep);
+    resetStep({ answer: answers[nextStep] || "" });
   }
 
   const progressFill = ((step + 1) / totalSteps) * 100;
@@ -189,11 +215,11 @@ export default function ClarifyPage() {
               {session.clarifications[step]?.options?.length ? (
                 <div className="flex flex-wrap gap-2 mb-3">
                   {session.clarifications[step].options!.map((opt, i) => {
-                    const selected = answers[step] === opt;
+                    const selected = getValues("answer") === opt;
                     return (
                       <button
                         key={i}
-                        onClick={() => updateAnswer(selected ? "" : opt)}
+                        onClick={() => setValue("answer", selected ? "" : opt, { shouldValidate: true })}
                         style={{
                           padding: "6px 14px",
                           borderRadius: 999,
@@ -215,10 +241,9 @@ export default function ClarifyPage() {
 
               {/* Answer textarea */}
               <Textarea
-                ref={textareaRef}
+                ref={answerRef}
+                {...answerProps}
                 rows={4}
-                value={answers[step]}
-                onChange={(e) => updateAnswer(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey) {
                     e.preventDefault();
@@ -296,7 +321,7 @@ export default function ClarifyPage() {
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
                         e.preventDefault();
-                        handleFinalSubmit();
+                        handleNext();
                       }
                     }}
                     placeholder="Daily Active Users…"
@@ -317,14 +342,21 @@ export default function ClarifyPage() {
           {isScaleStep ? (
             <Button
               size="md"
-              onClick={handleFinalSubmit}
-              disabled={loading}
-              style={{ opacity: loading ? 0.7 : 1 }}
+              onClick={handleNext}
+              disabled={submitMutation.isPending}
+              style={{ opacity: submitMutation.isPending ? 0.7 : 1 }}
             >
-              {loading ? <><Spinner /><span>Generating…</span></> : "Generate Architecture →"}
+              {submitMutation.isPending ? (
+                <>
+                  <Spinner />
+                  <span>Generating…</span>
+                </>
+              ) : (
+                "Generate Architecture →"
+              )}
             </Button>
           ) : (
-            <Button size="md" onClick={handleNext} disabled={!answers[step]?.trim()}>
+            <Button size="md" onClick={handleNext} disabled={!isStepValid}>
               Next →
             </Button>
           )}

@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { KeyboardEvent, useEffect, useRef, useState } from "react";
 
 import ModelSelect from "@/components/ModelSelect";
+import { Button } from "@/components/ui/Button";
+import { Textarea } from "@/components/ui/Textarea";
 import GearIcon from "@/components/icons/GearIcon";
 import LogoMark from "@/components/icons/LogoMark";
 import Spinner from "@/components/icons/Spinner";
@@ -226,24 +228,14 @@ export default function HomePage() {
             padding: "14px 14px 48px 14px",
           }}
         >
-          <textarea
+          <Textarea
             ref={textareaRef}
             rows={3}
             value={problem}
             onChange={(e) => setProblem(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="e.g. Design a URL shortener like bit.ly…"
-            style={{
-              width: "100%",
-              background: "transparent",
-              border: "none",
-              outline: "none",
-              resize: "none",
-              color: "var(--color-text)",
-              fontSize: 15,
-              lineHeight: 1.6,
-              fontFamily: "inherit",
-            }}
+            bordered={false}
           />
 
           {/* Bottom toolbar */}
@@ -304,35 +296,9 @@ export default function HomePage() {
             {!missingKey && !isLocalModel && <div style={{ flex: 1 }} />}
 
             {/* Submit button */}
-            <button
-              onClick={handleSubmit}
-              disabled={!canSubmit}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                padding: "7px 14px",
-                borderRadius: "var(--radius-sm)",
-                background: canSubmit ? "var(--color-primary)" : "var(--color-surface-offset)",
-                color: canSubmit ? "#fff" : "var(--color-text-faint)",
-                border: "none",
-                cursor: canSubmit ? "pointer" : "not-allowed",
-                fontSize: 13,
-                fontWeight: 500,
-                fontFamily: "inherit",
-                transition: "background 0.15s",
-                flexShrink: 0,
-              }}
-            >
-              {loading ? (
-                <>
-                  <Spinner />
-                  <span>Thinking…</span>
-                </>
-              ) : (
-                <span>Submit ↵</span>
-              )}
-            </button>
+            <Button onClick={handleSubmit} disabled={!canSubmit}>
+              {loading ? <><Spinner /><span>Thinking…</span></> : "Submit ↵"}
+            </Button>
           </div>
         </div>
 

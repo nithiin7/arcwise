@@ -3,6 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useSettingsStore } from "@/store/settingsStore";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
 
 interface Provider {
   label: string;
@@ -89,62 +91,33 @@ function ProviderCard({ provider }: { provider: Provider }) {
       </div>
 
       <div style={{ display: "flex", gap: 8 }}>
-        <input
+        <Input
           type={visible ? "text" : "password"}
           value={key}
           onChange={(e) => handleChange(e.target.value)}
           onBlur={handleBlur}
           placeholder={`Paste your ${provider.label} API key`}
           autoComplete="off"
-          style={{
-            flex: 1,
-            background: "var(--color-surface-offset)",
-            border: "1px solid var(--color-border)",
-            borderRadius: "var(--radius-sm)",
-            color: "var(--color-text)",
-            fontSize: 13,
-            fontFamily: "inherit",
-            padding: "8px 12px",
-            outline: "none",
-          }}
+          style={{ flex: 1, background: "var(--color-surface-offset)" }}
         />
-        <button
+        <Button
           type="button"
+          variant="secondary"
           onClick={() => setVisible((v) => !v)}
           title={visible ? "Hide" : "Show"}
-          style={{
-            background: "var(--color-surface-offset)",
-            border: "1px solid var(--color-border)",
-            borderRadius: "var(--radius-sm)",
-            color: "var(--color-text-muted)",
-            fontSize: 13,
-            padding: "8px 12px",
-            cursor: "pointer",
-            fontFamily: "inherit",
-            flexShrink: 0,
-          }}
+          style={{ background: "var(--color-surface-offset)" }}
         >
           {visible ? "Hide" : "Show"}
-        </button>
+        </Button>
         {key && (
-          <button
+          <Button
             type="button"
+            variant="secondary"
             onClick={() => { setKey(provider.field, ""); setSaved(false); }}
             title="Clear"
-            style={{
-              background: "transparent",
-              border: "1px solid var(--color-border)",
-              borderRadius: "var(--radius-sm)",
-              color: "var(--color-text-faint)",
-              fontSize: 13,
-              padding: "8px 12px",
-              cursor: "pointer",
-              fontFamily: "inherit",
-              flexShrink: 0,
-            }}
           >
             Clear
-          </button>
+          </Button>
         )}
       </div>
 

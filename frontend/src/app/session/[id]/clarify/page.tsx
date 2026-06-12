@@ -5,22 +5,10 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import * as api from "@/lib/api";
 import { useSessionStore } from "@/store/sessionStore";
-
-function Spinner() {
-  return (
-    <svg
-      className="animate-spin"
-      width="16"
-      height="16"
-      viewBox="0 0 16 16"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <circle cx="8" cy="8" r="6" stroke="currentColor" strokeOpacity="0.25" strokeWidth="2" />
-      <path d="M14 8a6 6 0 0 0-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-    </svg>
-  );
-}
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Textarea } from "@/components/ui/Textarea";
+import Spinner from "@/components/icons/Spinner";
 
 export default function ClarifyPage() {
   const router = useRouter();
@@ -226,7 +214,7 @@ export default function ClarifyPage() {
               ) : null}
 
               {/* Answer textarea */}
-              <textarea
+              <Textarea
                 ref={textareaRef}
                 rows={4}
                 value={answers[step]}
@@ -238,20 +226,7 @@ export default function ClarifyPage() {
                   }
                 }}
                 placeholder="Your answer…"
-                style={{
-                  width: "100%",
-                  background: "var(--color-surface)",
-                  border: "1px solid var(--color-border)",
-                  borderRadius: "var(--radius-md)",
-                  padding: "12px 14px",
-                  color: "var(--color-text)",
-                  fontSize: 15,
-                  lineHeight: 1.6,
-                  fontFamily: "inherit",
-                  outline: "none",
-                  resize: "none",
-                  marginBottom: 16,
-                }}
+                style={{ marginBottom: 16 }}
               />
             </motion.div>
           ) : (
@@ -313,7 +288,7 @@ export default function ClarifyPage() {
                   >
                     Help the AI calibrate its architecture suggestions to your target scale.
                   </p>
-                  <input
+                  <Input
                     ref={scaleInputRef}
                     type="text"
                     value={userScale}
@@ -325,17 +300,7 @@ export default function ClarifyPage() {
                       }
                     }}
                     placeholder="Daily Active Users…"
-                    style={{
-                      width: "100%",
-                      background: "var(--color-surface-2)",
-                      border: "1px solid var(--color-border)",
-                      borderRadius: "var(--radius-sm)",
-                      padding: "10px 12px",
-                      color: "var(--color-text)",
-                      fontSize: 14,
-                      fontFamily: "inherit",
-                      outline: "none",
-                    }}
+                    style={{ width: "100%", background: "var(--color-surface-2)", fontSize: 14, padding: "10px 12px" }}
                   />
                 </motion.div>
               </AnimatePresence>
@@ -345,71 +310,23 @@ export default function ClarifyPage() {
 
         {/* Navigation buttons */}
         <div className="flex items-center justify-between w-full mt-2">
-          <button
-            onClick={handleBack}
-            disabled={step === 0}
-            style={{
-              padding: "9px 20px",
-              borderRadius: "var(--radius-sm)",
-              border: "1px solid var(--color-border)",
-              background: "transparent",
-              color: step === 0 ? "var(--color-text-faint)" : "var(--color-text-muted)",
-              fontSize: 14,
-              fontWeight: 500,
-              fontFamily: "inherit",
-              cursor: step === 0 ? "not-allowed" : "pointer",
-            }}
-          >
+          <Button variant="secondary" size="md" onClick={handleBack} disabled={step === 0}>
             ← Back
-          </button>
+          </Button>
 
           {isScaleStep ? (
-            <button
+            <Button
+              size="md"
               onClick={handleFinalSubmit}
               disabled={loading}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                padding: "9px 20px",
-                borderRadius: "var(--radius-sm)",
-                border: "none",
-                background: "var(--color-primary)",
-                color: "#fff",
-                fontSize: 14,
-                fontWeight: 600,
-                fontFamily: "inherit",
-                cursor: loading ? "not-allowed" : "pointer",
-                opacity: loading ? 0.7 : 1,
-              }}
+              style={{ opacity: loading ? 0.7 : 1 }}
             >
-              {loading ? (
-                <>
-                  <Spinner />
-                  <span>Generating…</span>
-                </>
-              ) : (
-                <span>Generate Architecture →</span>
-              )}
-            </button>
+              {loading ? <><Spinner /><span>Generating…</span></> : "Generate Architecture →"}
+            </Button>
           ) : (
-            <button
-              onClick={handleNext}
-              disabled={!answers[step]?.trim()}
-              style={{
-                padding: "9px 20px",
-                borderRadius: "var(--radius-sm)",
-                border: "none",
-                background: answers[step]?.trim() ? "var(--color-primary)" : "var(--color-surface-offset)",
-                color: answers[step]?.trim() ? "#fff" : "var(--color-text-faint)",
-                fontSize: 14,
-                fontWeight: 600,
-                fontFamily: "inherit",
-                cursor: answers[step]?.trim() ? "pointer" : "not-allowed",
-              }}
-            >
-              {isLastQuestion ? "Next →" : "Next →"}
-            </button>
+            <Button size="md" onClick={handleNext} disabled={!answers[step]?.trim()}>
+              Next →
+            </Button>
           )}
         </div>
       </div>

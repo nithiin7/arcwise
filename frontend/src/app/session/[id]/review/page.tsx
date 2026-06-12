@@ -7,41 +7,9 @@ import * as api from "@/lib/api";
 import { useSessionStore } from "@/store/sessionStore";
 import { scoreColor } from "@/lib/utils";
 import type { Scores } from "@/types";
-
-function Spinner({ size = 24 }: { size?: number }) {
-  return (
-    <svg
-      className="animate-spin"
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeOpacity="0.2" strokeWidth="2.5" />
-      <path
-        d="M22 12a10 10 0 0 0-10-10"
-        stroke="currentColor"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-function BackArrow() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path
-        d="M10 3L5 8l5 5"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
+import { Button } from "@/components/ui/Button";
+import BackArrow from "@/components/icons/BackArrow";
+import Spinner from "@/components/icons/Spinner";
 
 const SCORE_KEYS: { key: keyof Scores; label: string }[] = [
   { key: "functional_coverage", label: "Functional" },
@@ -107,7 +75,7 @@ export default function ReviewPage() {
           color: "var(--color-text-muted)",
         }}
       >
-        <Spinner size={32} />
+        <Spinner size={24} />
         <span style={{ fontSize: 14 }}>Reviewing your design…</span>
       </div>
     );
@@ -132,24 +100,13 @@ export default function ReviewPage() {
           zIndex: 10,
         }}
       >
-        <button
+        <Button
+          variant="secondary"
           onClick={() => router.back()}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            width: 28,
-            height: 28,
-            borderRadius: "var(--radius-sm)",
-            border: "1px solid var(--color-border)",
-            background: "transparent",
-            color: "var(--color-text-muted)",
-            cursor: "pointer",
-            flexShrink: 0,
-          }}
+          style={{ width: 28, height: 28, padding: 0 }}
         >
           <BackArrow />
-        </button>
+        </Button>
 
         <span
           style={{
@@ -165,23 +122,9 @@ export default function ReviewPage() {
           {session.problem}
         </span>
 
-        <button
-          onClick={handleNewDesign}
-          style={{
-            padding: "7px 14px",
-            borderRadius: "var(--radius-sm)",
-            border: "1px solid var(--color-border)",
-            background: "transparent",
-            color: "var(--color-text-muted)",
-            fontSize: 13,
-            fontWeight: 500,
-            fontFamily: "inherit",
-            cursor: "pointer",
-            flexShrink: 0,
-          }}
-        >
+        <Button variant="secondary" onClick={handleNewDesign}>
           New Design
-        </button>
+        </Button>
       </header>
 
       {/* Body */}

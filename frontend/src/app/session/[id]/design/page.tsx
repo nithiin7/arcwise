@@ -10,54 +10,10 @@ import type { Revision } from "@/types";
 import { ArchitectureCanvas } from "@/components/design/ArchitectureCanvas";
 import { ComponentJustifications } from "@/components/design/ComponentJustifications";
 import { RevisionTimeline } from "@/components/design/RevisionTimeline";
-
-function Spinner({ size = 16 }: { size?: number }) {
-  return (
-    <svg
-      className="animate-spin"
-      width={size}
-      height={size}
-      viewBox="0 0 16 16"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <circle
-        cx="8"
-        cy="8"
-        r="6"
-        stroke="currentColor"
-        strokeOpacity="0.25"
-        strokeWidth="2"
-      />
-      <path
-        d="M14 8a6 6 0 0 0-6-6"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-function BackArrow() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 16 16"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <path
-        d="M10 3L5 8l5 5"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import BackArrow from "@/components/icons/BackArrow";
+import Spinner from "@/components/icons/Spinner";
 
 function SendIcon() {
   return (
@@ -248,24 +204,13 @@ export default function DesignPage() {
           flexShrink: 0,
         }}
       >
-        <button
+        <Button
+          variant="secondary"
           onClick={() => router.back()}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            width: 28,
-            height: 28,
-            borderRadius: "var(--radius-sm)",
-            border: "1px solid var(--color-border)",
-            background: "transparent",
-            color: "var(--color-text-muted)",
-            cursor: "pointer",
-            flexShrink: 0,
-          }}
+          style={{ width: 28, height: 28, padding: 0 }}
         >
           <BackArrow />
-        </button>
+        </Button>
 
         <span
           style={{
@@ -281,38 +226,9 @@ export default function DesignPage() {
           {session.problem}
         </span>
 
-        <button
-          onClick={handleSubmit}
-          disabled={!currentMermaid || isSubmitting}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            padding: "7px 14px",
-            borderRadius: "var(--radius-sm)",
-            border: "none",
-            background:
-              currentMermaid && !isSubmitting
-                ? "var(--color-primary)"
-                : "var(--color-surface-offset)",
-            color:
-              currentMermaid && !isSubmitting ? "#fff" : "var(--color-text-faint)",
-            fontSize: 13,
-            fontWeight: 600,
-            fontFamily: "inherit",
-            cursor: currentMermaid && !isSubmitting ? "pointer" : "not-allowed",
-            flexShrink: 0,
-          }}
-        >
-          {isSubmitting ? (
-            <>
-              <Spinner />
-              <span>Submitting…</span>
-            </>
-          ) : (
-            <span>Submit for Review →</span>
-          )}
-        </button>
+        <Button onClick={handleSubmit} disabled={!currentMermaid || isSubmitting}>
+          {isSubmitting ? <><Spinner /><span>Submitting…</span></> : "Submit for Review →"}
+        </Button>
       </header>
 
       {/* Body */}
@@ -526,7 +442,7 @@ export default function DesignPage() {
               flexShrink: 0,
             }}
           >
-            <input
+            <Input
               ref={inputRef}
               type="text"
               value={inputValue}
@@ -539,44 +455,15 @@ export default function DesignPage() {
               }}
               placeholder="Ask for refinements…"
               disabled={isSending}
-              style={{
-                flex: 1,
-                background: "var(--color-surface)",
-                border: "1px solid var(--color-border)",
-                borderRadius: "var(--radius-sm)",
-                padding: "8px 10px",
-                color: "var(--color-text)",
-                fontSize: 13,
-                fontFamily: "inherit",
-                outline: "none",
-              }}
+              style={{ flex: 1, padding: "8px 10px" }}
             />
-            <button
+            <Button
               onClick={handleSend}
               disabled={isSending || !inputValue.trim()}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                width: 34,
-                height: 34,
-                borderRadius: "var(--radius-sm)",
-                border: "none",
-                background:
-                  !isSending && inputValue.trim()
-                    ? "var(--color-primary)"
-                    : "var(--color-surface-offset)",
-                color:
-                  !isSending && inputValue.trim()
-                    ? "#fff"
-                    : "var(--color-text-faint)",
-                cursor:
-                  !isSending && inputValue.trim() ? "pointer" : "not-allowed",
-                flexShrink: 0,
-              }}
+              style={{ width: 34, height: 34, padding: 0 }}
             >
               {isSending ? <Spinner /> : <SendIcon />}
-            </button>
+            </Button>
           </div>
         </div>
       </div>

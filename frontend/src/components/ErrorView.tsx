@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Button } from "@/components/ui/Button";
 
 interface Props {
   title?: string;
@@ -65,22 +66,7 @@ export default function ErrorView({
       )}
       <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
         {reset && (
-          <button
-            onClick={reset}
-            style={{
-              padding: "8px 18px",
-              borderRadius: "var(--radius-sm)",
-              background: "var(--color-primary)",
-              color: "#fff",
-              border: "none",
-              cursor: "pointer",
-              fontSize: 13,
-              fontWeight: 500,
-              fontFamily: "inherit",
-            }}
-          >
-            Try again
-          </button>
+          <Button onClick={reset}>Try again</Button>
         )}
         <Link
           href={backHref}

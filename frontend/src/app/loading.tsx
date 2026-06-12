@@ -1,17 +1,4 @@
-function Bone({ w, h, radius }: { w?: string | number; h: number; radius?: string }) {
-  return (
-    <div
-      className="animate-pulse"
-      style={{
-        width: w ?? "100%",
-        height: h,
-        borderRadius: radius ?? "var(--radius-sm)",
-        background: "var(--color-surface-offset)",
-        flexShrink: 0,
-      }}
-    />
-  );
-}
+import { Bone } from "@/components/Bone";
 
 export default function HomeLoading() {
   return (

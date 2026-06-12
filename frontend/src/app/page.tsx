@@ -7,6 +7,7 @@ import { motion } from "framer-motion";
 import * as api from "@/lib/api";
 import { useSessionStore } from "@/store/sessionStore";
 import { useSettingsStore } from "@/store/settingsStore";
+import ModelSelect from "@/components/ModelSelect";
 import type { Session } from "@/types";
 
 const EXAMPLES = [
@@ -50,6 +51,10 @@ const MODEL_GROUPS = [
       { value: "groq/llama-3.3-70b-versatile", label: "Llama 3.3 70B (Groq)" },
       { value: "groq/mixtral-8x7b-32768", label: "Mixtral 8x7B (Groq)" },
     ],
+  },
+  {
+    group: "Ollama (Local)",
+    options: [], // populated dynamically by ModelSelect
   },
 ];
 
@@ -112,7 +117,8 @@ export default function HomePage() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const storedKey = getKeyForModel(model);
-  const missingKey = !storedKey;
+  const isLocalModel = model.startsWith("ollama/");
+  const missingKey = !storedKey && !isLocalModel;
   const canSubmit = !!problem.trim() && !loading && !missingKey;
 
   async function handleSubmit() {
@@ -289,34 +295,13 @@ export default function HomePage() {
             }}
           >
             {/* Model picker */}
-            <select
+            <ModelSelect
+              groups={MODEL_GROUPS}
               value={model}
-              onChange={(e) => { setModel(e.target.value); setError(""); }}
-              style={{
-                background: "var(--color-surface-offset)",
-                border: "1px solid var(--color-border)",
-                borderRadius: "var(--radius-sm)",
-                color: "var(--color-text-muted)",
-                fontSize: 12,
-                fontFamily: "inherit",
-                padding: "5px 8px",
-                cursor: "pointer",
-                outline: "none",
-                flexShrink: 0,
-              }}
-            >
-              {MODEL_GROUPS.map((group) => (
-                <optgroup key={group.group} label={group.group}>
-                  {group.options.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </optgroup>
-              ))}
-            </select>
+              onChange={(v) => { setModel(v); setError(""); }}
+            />
 
-            {/* Missing key hint */}
+            {/* Hints */}
             {missingKey && (
               <Link
                 href="/settings"
@@ -333,9 +318,23 @@ export default function HomePage() {
                 API key required — add in Settings →
               </Link>
             )}
+            {isLocalModel && (
+              <span
+                style={{
+                  flex: 1,
+                  fontSize: 12,
+                  color: "var(--color-text-faint)",
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
+                Runs via Ollama on localhost:11434
+              </span>
+            )}
 
             {/* Spacer when no hint */}
-            {!missingKey && <div style={{ flex: 1 }} />}
+            {!missingKey && !isLocalModel && <div style={{ flex: 1 }} />}
 
             {/* Submit button */}
             <button

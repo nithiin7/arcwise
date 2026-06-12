@@ -39,6 +39,7 @@ export const useSettingsStore = create<SettingsState>()(
 
       getKeyForModel: (model) => {
         const s = get();
+        if (model.startsWith("ollama/")) return "";
         if (model.startsWith("claude") || model.startsWith("anthropic/")) return s.anthropicKey;
         if (
           model.startsWith("gpt-") ||

@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import architecture, clarify, refine, review, session
+from app.api.routes import architecture, clarify, models, refine, review, session
 from app.core.config import settings
 from app.core.logging import setup_logging
 
@@ -25,6 +25,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(models.router, prefix="/api/models")
 app.include_router(session.router, prefix="/api/sessions")
 app.include_router(clarify.router, prefix="/api/sessions")
 app.include_router(architecture.router, prefix="/api/sessions")

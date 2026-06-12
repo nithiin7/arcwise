@@ -11,6 +11,8 @@ from app.core.config import settings
 def _resolve_api_key(model: str, session_key: str | None) -> str | None:
     if session_key:
         return session_key
+    if model.startswith("ollama/"):
+        return None
     if model.startswith(("claude", "anthropic/")):
         return settings.anthropic_api_key
     if model.startswith(("gpt-", "o1", "o3", "openai/")):
@@ -22,6 +24,12 @@ def _resolve_api_key(model: str, session_key: str | None) -> str | None:
     if model.startswith("groq/"):
         return settings.groq_api_key
     return None
+
+
+def _extra_kwargs(model: str) -> dict[str, Any]:
+    if model.startswith("ollama/"):
+        return {"api_base": settings.ollama_base_url}
+    return {}
 
 
 async def complete(
@@ -39,6 +47,7 @@ async def complete(
         ],
         max_tokens=max_tokens,
         api_key=_resolve_api_key(model, api_key),
+        **_extra_kwargs(model),
     )
     content = response.choices[0].message.content
     if not isinstance(content, str):
@@ -62,6 +71,7 @@ async def stream_complete(
         max_tokens=max_tokens,
         api_key=_resolve_api_key(model, api_key),
         stream=True,
+        **_extra_kwargs(model),
     )
     async for chunk in response:
         delta = chunk.choices[0].delta.content

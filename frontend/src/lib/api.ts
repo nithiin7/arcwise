@@ -114,3 +114,7 @@ export function submitArchitecture(
 export function reviewDesign(sessionId: string): Promise<Review> {
   return request<Review>(`/sessions/${sessionId}/review`, { method: "POST" });
 }
+
+export function getOllamaModels(): Promise<{ models: string[] }> {
+  return request<{ models: string[] }>("/models/ollama");
+}

@@ -16,10 +16,12 @@ type Theme = "light" | "dark" | "system";
 interface SettingsState extends ProviderKeys {
   theme: Theme;
   resolvedTheme: "light" | "dark";
+  selectedModel: string;
   setKey: (field: keyof ProviderKeys, value: string) => void;
   getKeyForModel: (model: string) => string;
   setTheme: (theme: Theme) => void;
   setResolvedTheme: (theme: "light" | "dark") => void;
+  setSelectedModel: (model: string) => void;
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -32,10 +34,12 @@ export const useSettingsStore = create<SettingsState>()(
       groqKey: "",
       theme: "system",
       resolvedTheme: "light",
+      selectedModel: "claude-sonnet-4-6",
 
       setKey: (field, value) => set({ [field]: value }),
       setTheme: (theme) => set({ theme }),
       setResolvedTheme: (resolvedTheme) => set({ resolvedTheme }),
+      setSelectedModel: (model) => set({ selectedModel: model }),
 
       getKeyForModel: (model) => {
         const s = get();
@@ -45,6 +49,7 @@ export const useSettingsStore = create<SettingsState>()(
           model.startsWith("gpt-") ||
           model.startsWith("o1") ||
           model.startsWith("o3") ||
+          model.startsWith("o4") ||
           model.startsWith("openai/")
         )
           return s.openaiKey;
@@ -64,6 +69,7 @@ export const useSettingsStore = create<SettingsState>()(
         xaiKey: s.xaiKey,
         groqKey: s.groqKey,
         theme: s.theme,
+        selectedModel: s.selectedModel,
       }),
     }
   )

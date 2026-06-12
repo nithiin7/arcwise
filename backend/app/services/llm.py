@@ -18,7 +18,7 @@ def _resolve_api_key(model: str, session_key: str | None) -> str | None:
         return None
     if model.startswith(("claude", "anthropic/")):
         return settings.anthropic_api_key
-    if model.startswith(("gpt-", "o1", "o3", "openai/")):
+    if model.startswith(("gpt-", "o1", "o3", "o4", "openai/")):
         return settings.openai_api_key
     if model.startswith(("gemini/", "google/")):
         return settings.gemini_api_key

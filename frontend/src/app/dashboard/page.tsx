@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { KeyboardEvent, useState } from "react";
+import { KeyboardEvent } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
@@ -15,7 +15,7 @@ import { Textarea } from "@/components/ui/Textarea";
 import GearIcon from "@/components/icons/GearIcon";
 import LogoMark from "@/components/icons/LogoMark";
 import Spinner from "@/components/icons/Spinner";
-import { DEFAULT_MODEL, EXAMPLES, MODEL_GROUPS } from "@/constants/dashboard";
+import { EXAMPLES, MODEL_GROUPS } from "@/constants/dashboard";
 import type { SessionSummary } from "@/api/sessions";
 import * as api from "@/api";
 import { createSessionSchema, type CreateSessionForm } from "@/lib/schemas";
@@ -65,7 +65,8 @@ export default function HomePage() {
   const router = useRouter();
   const setSession = useSessionStore((s) => s.setSession);
   const getKeyForModel = useSettingsStore((s) => s.getKeyForModel);
-  const [model, setModel] = useState(DEFAULT_MODEL);
+  const model = useSettingsStore((s) => s.selectedModel);
+  const setModel = useSettingsStore((s) => s.setSelectedModel);
 
   const {
     register,

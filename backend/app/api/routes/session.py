@@ -9,14 +9,17 @@ router = APIRouter()
 
 @router.post("/")
 async def create_session(body: CreateSessionRequest) -> dict:
-    questions = await generate_clarifications(body.problem)
+    questions = await generate_clarifications(body.problem, model=body.model, api_key=body.api_key)
     session = Session(
         problem=body.problem,
+        model=body.model,
+        api_key=body.api_key,
         clarifications=[ClarificationQA(question=q) for q in questions],
     )
     await save_session(session)
     return {
         "session_id": session.id,
         "problem": session.problem,
+        "model": session.model,
         "questions": questions,
     }

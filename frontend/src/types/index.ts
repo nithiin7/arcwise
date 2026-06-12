@@ -50,6 +50,7 @@ export type SessionStatus = "clarifying" | "designing" | "reviewing" | "complete
 export interface Session {
   id: string;
   problem: string;
+  model: string;
   user_scale?: string;
   clarifications: ClarificationQA[];
   architecture: Architecture;

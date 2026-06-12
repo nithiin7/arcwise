@@ -29,13 +29,18 @@ async function request<T>(
 export interface CreateSessionResponse {
   session_id: string;
   problem: string;
+  model: string;
   questions: string[];
 }
 
-export function createSession(problem: string): Promise<CreateSessionResponse> {
+export function createSession(
+  problem: string,
+  model: string,
+  apiKey?: string,
+): Promise<CreateSessionResponse> {
   return request<CreateSessionResponse>("/sessions", {
     method: "POST",
-    body: JSON.stringify({ problem }),
+    body: JSON.stringify({ problem, model, api_key: apiKey || null }),
   });
 }
 

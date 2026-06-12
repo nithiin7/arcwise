@@ -1,5 +1,5 @@
 from app.models.session import Session
-from app.services.claude import complete, extract_json
+from app.services.llm import complete, extract_json
 
 SYSTEM_PROMPT = """You are a principal engineer tasked with producing a recommended system architecture.
 
@@ -35,5 +35,5 @@ async def suggest_architecture(session: Session) -> dict:
                 lines.append(f"  Q: {qa.question}")
                 lines.append(f"  A: {qa.answer}")
     user_prompt = "\n".join(lines)
-    raw = await complete(system=SYSTEM_PROMPT, user=user_prompt, max_tokens=8192)
+    raw = await complete(system=SYSTEM_PROMPT, user=user_prompt, model=session.model, api_key=session.api_key, max_tokens=8192)
     return extract_json(raw)

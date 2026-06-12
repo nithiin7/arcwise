@@ -2,9 +2,11 @@
 
 import { useState, useRef, KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import * as api from "@/lib/api";
 import { useSessionStore } from "@/store/sessionStore";
+import { useSettingsStore } from "@/store/settingsStore";
 import type { Session } from "@/types";
 
 const EXAMPLES = [
@@ -15,6 +17,45 @@ const EXAMPLES = [
   "Design YouTube",
 ];
 
+const MODEL_GROUPS = [
+  {
+    group: "Claude",
+    options: [
+      { value: "claude-sonnet-4-6", label: "Claude Sonnet 4.6" },
+      { value: "claude-opus-4-8", label: "Claude Opus 4.8" },
+      { value: "claude-haiku-4-5-20251001", label: "Claude Haiku 4.5" },
+    ],
+  },
+  {
+    group: "OpenAI",
+    options: [
+      { value: "gpt-4o", label: "GPT-4o" },
+      { value: "gpt-4o-mini", label: "GPT-4o mini" },
+    ],
+  },
+  {
+    group: "Google",
+    options: [
+      { value: "gemini/gemini-2.0-flash", label: "Gemini 2.0 Flash" },
+      { value: "gemini/gemini-1.5-pro", label: "Gemini 1.5 Pro" },
+    ],
+  },
+  {
+    group: "xAI",
+    options: [{ value: "xai/grok-2", label: "Grok 2" }],
+  },
+  {
+    group: "Groq",
+    options: [
+      { value: "groq/llama-3.3-70b-versatile", label: "Llama 3.3 70B (Groq)" },
+      { value: "groq/mixtral-8x7b-32768", label: "Mixtral 8x7B (Groq)" },
+    ],
+  },
+];
+
+const DEFAULT_MODEL = "claude-sonnet-4-6";
+
+
 function LogoMark() {
   return (
     <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -22,6 +63,19 @@ function LogoMark() {
       <rect x="10" y="0" width="8" height="8" rx="2" fill="#6366f1" opacity="0.7" />
       <rect x="0" y="10" width="8" height="8" rx="2" fill="#6366f1" opacity="0.7" />
       <rect x="10" y="10" width="8" height="8" rx="2" fill="#6366f1" opacity="0.4" />
+    </svg>
+  );
+}
+
+function GearIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path
+        fillRule="evenodd"
+        clipRule="evenodd"
+        d="M7.5 1a.5.5 0 0 1 .491.401l.2 1.196a4.97 4.97 0 0 1 1.055.437l1.02-.614a.5.5 0 0 1 .625.08l.707.707a.5.5 0 0 1 .08.625l-.614 1.02a4.97 4.97 0 0 1 .437 1.055l1.196.2A.5.5 0 0 1 14 7.5v1a.5.5 0 0 1-.403.491l-1.196.2a4.97 4.97 0 0 1-.437 1.055l.614 1.02a.5.5 0 0 1-.08.625l-.707.707a.5.5 0 0 1-.625.08l-1.02-.614a4.97 4.97 0 0 1-1.055.437l-.2 1.196A.5.5 0 0 1 7.5 14h-1a.5.5 0 0 1-.491-.403l-.2-1.196a4.97 4.97 0 0 1-1.055-.437l-1.02.614a.5.5 0 0 1-.625-.08l-.707-.707a.5.5 0 0 1-.08-.625l.614-1.02a4.97 4.97 0 0 1-.437-1.055l-1.196-.2A.5.5 0 0 1 1 7.5v-1a.5.5 0 0 1 .403-.491l1.196-.2a4.97 4.97 0 0 1 .437-1.055l-.614-1.02a.5.5 0 0 1 .08-.625l.707-.707a.5.5 0 0 1 .625-.08l1.02.614a4.97 4.97 0 0 1 1.055-.437l.2-1.196A.5.5 0 0 1 6.5 1h1ZM7 7.5a.5.5 0 1 0 1 0 .5.5 0 0 0-1 0Zm.5-2a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z"
+        fill="currentColor"
+      />
     </svg>
   );
 }
@@ -50,19 +104,27 @@ function Spinner() {
 export default function HomePage() {
   const router = useRouter();
   const setSession = useSessionStore((s) => s.setSession);
+  const getKeyForModel = useSettingsStore((s) => s.getKeyForModel);
   const [problem, setProblem] = useState("");
+  const [model, setModel] = useState(DEFAULT_MODEL);
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  const storedKey = getKeyForModel(model);
+  const missingKey = !storedKey;
+  const canSubmit = !!problem.trim() && !loading && !missingKey;
+
   async function handleSubmit() {
-    const trimmed = problem.trim();
-    if (!trimmed || loading) return;
+    if (!canSubmit) return;
+    setError("");
     setLoading(true);
     try {
-      const res = await api.createSession(trimmed);
+      const res = await api.createSession(problem.trim(), model, storedKey || undefined);
       const session: Session = {
         id: res.session_id,
         problem: res.problem,
+        model: res.model,
         clarifications: res.questions.map((q) => ({ question: q, answer: "" })),
         architecture: {
           llm_suggested_mermaid: "",
@@ -78,6 +140,7 @@ export default function HomePage() {
       router.push(`/session/${res.session_id}/clarify`);
     } catch (err) {
       console.error(err);
+      setError(err instanceof Error ? err.message : "Something went wrong.");
       setLoading(false);
     }
   }
@@ -106,6 +169,31 @@ export default function HomePage() {
           }}
         />
       </div>
+
+      {/* Settings link */}
+      <Link
+        href="/settings"
+        style={{
+          position: "fixed",
+          top: 16,
+          right: 20,
+          display: "flex",
+          alignItems: "center",
+          gap: 5,
+          color: "var(--color-text-faint)",
+          fontSize: 12,
+          textDecoration: "none",
+          padding: "5px 10px",
+          borderRadius: "var(--radius-sm)",
+          transition: "color 0.15s",
+          zIndex: 20,
+        }}
+        onMouseEnter={(e) => ((e.currentTarget as HTMLAnchorElement).style.color = "var(--color-text-muted)")}
+        onMouseLeave={(e) => ((e.currentTarget as HTMLAnchorElement).style.color = "var(--color-text-faint)")}
+      >
+        <GearIcon />
+        Settings
+      </Link>
 
       <motion.div
         className="relative z-10 flex flex-col items-center w-full max-w-2xl"
@@ -191,39 +279,106 @@ export default function HomePage() {
             }}
           />
 
-          {/* Submit button */}
-          <button
-            onClick={handleSubmit}
-            disabled={!problem.trim() || loading}
+          {/* Bottom toolbar */}
+          <div
             style={{
               position: "absolute",
               bottom: 10,
+              left: 10,
               right: 10,
               display: "flex",
               alignItems: "center",
-              gap: 6,
-              padding: "7px 14px",
-              borderRadius: "var(--radius-sm)",
-              background: problem.trim() && !loading ? "var(--color-primary)" : "var(--color-surface-offset)",
-              color: problem.trim() && !loading ? "#fff" : "var(--color-text-faint)",
-              border: "none",
-              cursor: problem.trim() && !loading ? "pointer" : "not-allowed",
-              fontSize: 13,
-              fontWeight: 500,
-              fontFamily: "inherit",
-              transition: "background 0.15s",
+              gap: 8,
             }}
           >
-            {loading ? (
-              <>
-                <Spinner />
-                <span>Thinking…</span>
-              </>
-            ) : (
-              <span>Submit ↵</span>
+            {/* Model picker */}
+            <select
+              value={model}
+              onChange={(e) => { setModel(e.target.value); setError(""); }}
+              style={{
+                background: "var(--color-surface-offset)",
+                border: "1px solid var(--color-border)",
+                borderRadius: "var(--radius-sm)",
+                color: "var(--color-text-muted)",
+                fontSize: 12,
+                fontFamily: "inherit",
+                padding: "5px 8px",
+                cursor: "pointer",
+                outline: "none",
+                flexShrink: 0,
+              }}
+            >
+              {MODEL_GROUPS.map((group) => (
+                <optgroup key={group.group} label={group.group}>
+                  {group.options.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
+
+            {/* Missing key hint */}
+            {missingKey && (
+              <Link
+                href="/settings"
+                style={{
+                  flex: 1,
+                  fontSize: 12,
+                  color: "var(--color-warning)",
+                  textDecoration: "none",
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
+                API key required — add in Settings →
+              </Link>
             )}
-          </button>
+
+            {/* Spacer when no hint */}
+            {!missingKey && <div style={{ flex: 1 }} />}
+
+            {/* Submit button */}
+            <button
+              onClick={handleSubmit}
+              disabled={!canSubmit}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "7px 14px",
+                borderRadius: "var(--radius-sm)",
+                background: canSubmit ? "var(--color-primary)" : "var(--color-surface-offset)",
+                color: canSubmit ? "#fff" : "var(--color-text-faint)",
+                border: "none",
+                cursor: canSubmit ? "pointer" : "not-allowed",
+                fontSize: 13,
+                fontWeight: 500,
+                fontFamily: "inherit",
+                transition: "background 0.15s",
+                flexShrink: 0,
+              }}
+            >
+              {loading ? (
+                <>
+                  <Spinner />
+                  <span>Thinking…</span>
+                </>
+              ) : (
+                <span>Submit ↵</span>
+              )}
+            </button>
+          </div>
         </div>
+
+        {/* Error message */}
+        {error && (
+          <p style={{ color: "#ef4444", fontSize: 13, marginTop: 8, alignSelf: "flex-start" }}>
+            {error}
+          </p>
+        )}
 
         {/* Example pills */}
         <div className="flex flex-wrap justify-center gap-2 mt-5">

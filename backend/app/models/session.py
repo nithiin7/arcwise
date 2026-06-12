@@ -4,6 +4,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from app.core.config import settings
+
 
 class ClarificationQA(BaseModel):
     question: str
@@ -30,6 +32,8 @@ class Architecture(BaseModel):
 class Session(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     problem: str
+    model: str = Field(default_factory=lambda: settings.default_model)
+    api_key: str | None = Field(default=None, exclude=True, repr=False)
     user_scale: str | None = None
     clarifications: list[ClarificationQA] = Field(default_factory=list)
     architecture: Architecture = Field(default_factory=Architecture)
@@ -39,6 +43,8 @@ class Session(BaseModel):
 
 class CreateSessionRequest(BaseModel):
     problem: str
+    model: str = Field(default_factory=lambda: settings.default_model)
+    api_key: str | None = None
 
 
 class AnswerClarificationRequest(BaseModel):

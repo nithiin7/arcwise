@@ -1,6 +1,6 @@
 from app.knowledge.graph import get_reference_note
 from app.models.session import Session
-from app.services.claude import complete, extract_json
+from app.services.llm import complete, extract_json
 
 SYSTEM_PROMPT = """You are a senior engineering interviewer evaluating a candidate's system design submission.
 
@@ -64,5 +64,5 @@ async def review_design(session: Session) -> dict:
         lines.append(f"\nReference guidance:\n{reference_note}")
 
     user_prompt = "\n".join(lines)
-    raw = await complete(system=SYSTEM_PROMPT, user=user_prompt, max_tokens=8192)
+    raw = await complete(system=SYSTEM_PROMPT, user=user_prompt, model=session.model, api_key=session.api_key, max_tokens=8192)
     return extract_json(raw)

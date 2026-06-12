@@ -1,4 +1,4 @@
-from app.services.claude import complete, extract_json
+from app.services.llm import complete, extract_json
 
 SYSTEM_PROMPT = """You are an expert systems architect refining an existing Mermaid architecture diagram.
 
@@ -13,9 +13,11 @@ Return ONLY valid JSON — no prose, no markdown fences:
 { "updated_mermaid": "flowchart LR\\n...", "diff_summary": "<1-2 sentence summary>" }"""
 
 
-async def refine_architecture(current_mermaid: str, user_message: str) -> dict:
+async def refine_architecture(
+    current_mermaid: str, user_message: str, model: str, api_key: str | None = None
+) -> dict:
     user_prompt = (
         f"Current diagram:\n{current_mermaid}\n\nRequested change:\n{user_message}"
     )
-    raw = await complete(system=SYSTEM_PROMPT, user=user_prompt)
+    raw = await complete(system=SYSTEM_PROMPT, user=user_prompt, model=model, api_key=api_key)
     return extract_json(raw)

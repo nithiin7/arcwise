@@ -12,7 +12,6 @@ import * as api from "@/api";
 import { clarifyStepSchema, type ClarifyStepForm } from "@/lib/schemas";
 import { useSessionStore } from "@/store/sessionStore";
 import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import Spinner from "@/components/icons/Spinner";
 
@@ -23,14 +22,12 @@ export default function ClarifyPage() {
   const setSession = useSessionStore((s) => s.setSession);
 
   const questions = session?.clarifications.map((c) => c.question) ?? [];
-  const totalSteps = questions.length + 1; // questions + scale step
+  const totalSteps = questions.length;
 
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<string[]>(() => Array(questions.length).fill(""));
-  const [userScale, setUserScale] = useState("");
 
   const textareaFocusRef = useRef<HTMLTextAreaElement | null>(null);
-  const scaleInputRef = useRef<HTMLInputElement>(null);
 
   const {
     register,
@@ -61,16 +58,12 @@ export default function ClarifyPage() {
   }, []);
 
   useEffect(() => {
-    if (step < questions.length) {
-      textareaFocusRef.current?.focus();
-    } else {
-      scaleInputRef.current?.focus();
-    }
-  }, [step, questions.length]);
+    textareaFocusRef.current?.focus();
+  }, [step]);
 
   const submitMutation = useMutation({
-    mutationFn: (vars: { answers: string[]; userScale?: string }) =>
-      api.submitClarifications(session!.id, vars.answers, vars.userScale),
+    mutationFn: (vars: { answers: string[] }) =>
+      api.submitClarifications(session!.id, vars.answers),
     onSuccess: (_, vars) => {
       setSession({
         ...session!,
@@ -78,7 +71,6 @@ export default function ClarifyPage() {
           question: c.question,
           answer: vars.answers[i] ?? "",
         })),
-        user_scale: vars.userScale,
         status: "designing",
       });
       router.push(`/session/${session!.id}/design`);
@@ -90,36 +82,32 @@ export default function ClarifyPage() {
 
   if (!session) return null;
 
-  const isScaleStep = step === questions.length;
+  const isLastStep = step === questions.length - 1;
 
   function handleBack() {
     if (step === 0) return;
-    if (!isScaleStep) {
-      const val = getValues("answer");
-      setAnswers((prev) => {
-        const next = [...prev];
-        next[step] = val;
-        return next;
-      });
-    }
+    const val = getValues("answer");
+    setAnswers((prev) => {
+      const next = [...prev];
+      next[step] = val;
+      return next;
+    });
     const prevStep = step - 1;
     setStep(prevStep);
     resetStep({ answer: answers[prevStep] || "" });
   }
 
   function handleNext() {
-    if (isScaleStep) {
-      submitMutation.mutate({ answers, userScale: userScale.trim() || undefined });
-      return;
-    }
     if (!isStepValid) return;
     const val = getValues("answer");
+    const nextAnswers = [...answers];
+    nextAnswers[step] = val;
+    if (isLastStep) {
+      submitMutation.mutate({ answers: nextAnswers });
+      return;
+    }
     const nextStep = step + 1;
-    setAnswers((prev) => {
-      const next = [...prev];
-      next[step] = val;
-      return next;
-    });
+    setAnswers(nextAnswers);
     setStep(nextStep);
     resetStep({ answer: answers[nextStep] || "" });
   }
@@ -179,161 +167,83 @@ export default function ClarifyPage() {
         </div>
 
         <AnimatePresence mode="wait">
-          {!isScaleStep ? (
-            <motion.div
-              key={step}
-              className="w-full"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-            >
-              {/* Question indicator */}
-              <div className="mb-3">
-                <span
-                  style={{
-                    fontSize: 13,
-                    fontWeight: 600,
-                    color: "var(--color-primary)",
-                  }}
-                >
-                  Question {step + 1} of {questions.length}
-                </span>
-              </div>
-
-              {/* Question text */}
-              <h2
+          <motion.div
+            key={step}
+            className="w-full"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+          >
+            {/* Question indicator */}
+            <div className="mb-3">
+              <span
                 style={{
-                  fontSize: "clamp(1.2rem, 3vw, 1.6rem)",
+                  fontSize: 13,
                   fontWeight: 600,
-                  color: "var(--color-text)",
-                  lineHeight: 1.3,
-                  marginBottom: 20,
+                  color: "var(--color-primary)",
                 }}
               >
-                {questions[step]}
-              </h2>
+                Question {step + 1} of {questions.length}
+              </span>
+            </div>
 
-              {/* Option chips */}
-              {session.clarifications[step]?.options?.length ? (
-                <div className="flex flex-wrap gap-2 mb-3" style={{ marginBottom: 16 }}>
-                  {session.clarifications[step].options!.map((opt, i) => {
-                    const selected = getValues("answer") === opt;
-                    return (
-                      <button
-                        key={i}
-                        onClick={() => setValue("answer", selected ? "" : opt, { shouldValidate: true })}
-                        style={{
-                          padding: "6px 14px",
-                          borderRadius: 999,
-                          border: `1px solid ${selected ? "var(--color-primary)" : "var(--color-border)"}`,
-                          background: selected ? "rgba(99,102,241,0.1)" : "var(--color-surface)",
-                          color: selected ? "var(--color-primary)" : "var(--color-text-muted)",
-                          fontSize: 13,
-                          fontFamily: "inherit",
-                          cursor: "pointer",
-                          transition: "all 0.15s",
-                        }}
-                      >
-                        {opt}
-                      </button>
-                    );
-                  })}
-                </div>
-              ) : null}
-
-              {/* Answer textarea */}
-              <Textarea
-                ref={answerRef}
-                {...answerProps}
-                rows={4}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    handleNext();
-                  }
-                }}
-                placeholder="Your answer…"
-                style={{ marginBottom: 16 }}
-              />
-            </motion.div>
-          ) : (
-            <motion.div
-              key="scale"
-              className="w-full"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+            {/* Question text */}
+            <h2
+              style={{
+                fontSize: "clamp(1.2rem, 3vw, 1.6rem)",
+                fontWeight: 600,
+                color: "var(--color-text)",
+                lineHeight: 1.3,
+                marginBottom: 20,
+              }}
             >
-              <AnimatePresence>
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-                  style={{
-                    overflow: "hidden",
-                    background: "var(--color-surface)",
-                    border: "1px solid var(--color-border)",
-                    borderRadius: "var(--radius-lg)",
-                    padding: "20px 20px 24px",
-                    marginBottom: 16,
-                  }}
-                >
-                  <div className="flex items-center gap-2 mb-1">
-                    <span style={{ fontSize: 16 }}>📊</span>
-                    <span
+              {questions[step]}
+            </h2>
+
+            {/* Option chips */}
+            {session.clarifications[step]?.options?.length ? (
+              <div className="flex flex-wrap gap-2 mb-3" style={{ marginBottom: 16 }}>
+                {session.clarifications[step].options!.map((opt, i) => {
+                  const selected = getValues("answer") === opt;
+                  return (
+                    <button
+                      key={i}
+                      onClick={() => setValue("answer", selected ? "" : opt, { shouldValidate: true })}
                       style={{
-                        fontSize: 15,
-                        fontWeight: 600,
-                        color: "var(--color-text)",
-                      }}
-                    >
-                      Approximate scale
-                    </span>
-                    <span
-                      style={{
-                        fontSize: 11,
-                        fontWeight: 500,
-                        color: "var(--color-text-faint)",
-                        background: "var(--color-surface-offset)",
-                        padding: "2px 8px",
+                        padding: "6px 14px",
                         borderRadius: 999,
-                        marginLeft: 4,
+                        border: `1px solid ${selected ? "var(--color-primary)" : "var(--color-border)"}`,
+                        background: selected ? "rgba(99,102,241,0.1)" : "var(--color-surface)",
+                        color: selected ? "var(--color-primary)" : "var(--color-text-muted)",
+                        fontSize: 13,
+                        fontFamily: "inherit",
+                        cursor: "pointer",
+                        transition: "all 0.15s",
                       }}
                     >
-                      optional
-                    </span>
-                  </div>
-                  <p
-                    style={{
-                      fontSize: 13,
-                      color: "var(--color-text-muted)",
-                      marginBottom: 14,
-                      lineHeight: 1.5,
-                    }}
-                  >
-                    Help the AI calibrate its architecture suggestions to your target scale.
-                  </p>
-                  <Input
-                    ref={scaleInputRef}
-                    type="text"
-                    value={userScale}
-                    onChange={(e) => setUserScale(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        handleNext();
-                      }
-                    }}
-                    placeholder="Daily Active Users…"
-                    style={{ width: "100%", background: "var(--color-surface-2)", fontSize: 14, padding: "10px 12px" }}
-                  />
-                </motion.div>
-              </AnimatePresence>
-            </motion.div>
-          )}
+                      {opt}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null}
+
+            {/* Answer textarea */}
+            <Textarea
+              ref={answerRef}
+              {...answerProps}
+              rows={4}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleNext();
+                }
+              }}
+              placeholder="Your answer…"
+              style={{ marginBottom: 16 }}
+            />
+          </motion.div>
         </AnimatePresence>
 
         {/* Navigation buttons */}
@@ -342,27 +252,23 @@ export default function ClarifyPage() {
             ← Back
           </Button>
 
-          {isScaleStep ? (
-            <Button
-              size="md"
-              onClick={handleNext}
-              disabled={submitMutation.isPending}
-              style={{ opacity: submitMutation.isPending ? 0.7 : 1 }}
-            >
-              {submitMutation.isPending ? (
-                <>
-                  <Spinner />
-                  <span>Generating…</span>
-                </>
-              ) : (
-                "Generate Architecture →"
-              )}
-            </Button>
-          ) : (
-            <Button size="md" onClick={handleNext} disabled={!isStepValid}>
-              Next →
-            </Button>
-          )}
+          <Button
+            size="md"
+            onClick={handleNext}
+            disabled={!isStepValid || submitMutation.isPending}
+            style={{ opacity: submitMutation.isPending ? 0.7 : 1 }}
+          >
+            {submitMutation.isPending ? (
+              <>
+                <Spinner />
+                <span>Generating…</span>
+              </>
+            ) : isLastStep ? (
+              "Generate Architecture →"
+            ) : (
+              "Next →"
+            )}
+          </Button>
         </div>
       </div>
     </div>

@@ -30,7 +30,7 @@ export interface CreateSessionResponse {
   session_id: string;
   problem: string;
   model: string;
-  questions: string[];
+  questions: Array<{ question: string; options: string[] }>;
 }
 
 export function createSession(
@@ -56,7 +56,7 @@ export function submitClarifications(
   answers: string[],
   userScale?: string,
 ): Promise<void> {
-  return request<void>(`/sessions/${sessionId}/clarifications`, {
+  return request<void>(`/sessions/${sessionId}/clarify`, {
     method: "POST",
     body: JSON.stringify({ answers, user_scale: userScale }),
   });

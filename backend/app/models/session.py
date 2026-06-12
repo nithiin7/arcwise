@@ -10,6 +10,7 @@ from app.core.config import settings
 class ClarificationQA(BaseModel):
     question: str
     answer: str = ""
+    options: list[str] = []
 
 
 class Revision(BaseModel):

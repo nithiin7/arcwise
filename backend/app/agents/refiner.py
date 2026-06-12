@@ -19,5 +19,5 @@ async def refine_architecture(
     user_prompt = (
         f"Current diagram:\n{current_mermaid}\n\nRequested change:\n{user_message}"
     )
-    raw = await complete(system=SYSTEM_PROMPT, user=user_prompt, model=model, api_key=api_key)
+    raw = await complete(system=SYSTEM_PROMPT, user=user_prompt, model=model, api_key=api_key, json_mode=True)
     return extract_json(raw)

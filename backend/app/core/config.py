@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379"
     use_redis: bool = False
     cors_origins: list[str] = ["http://localhost:3000"]
-    log_level: str = "INFO"
+    log_level: str = "WARNING"
 
 
 settings = Settings()

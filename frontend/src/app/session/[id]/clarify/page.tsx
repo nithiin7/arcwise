@@ -110,9 +110,9 @@ export default function ClarifyPage() {
   const progressFill = ((step + 1) / totalSteps) * 100;
 
   return (
-    <div className="flex flex-col min-h-screen px-4 py-8" style={{ background: "var(--color-bg)" }}>
+    <div className="flex flex-col items-center min-h-screen px-4 py-8" style={{ background: "var(--color-bg)" }}>
       {/* Progress bar */}
-      <div className="w-full max-w-2xl mx-auto mb-10">
+      <div className="w-full max-w-2xl mb-10">
         <div
           style={{
             display: "flex",
@@ -145,7 +145,7 @@ export default function ClarifyPage() {
         </div>
       </div>
 
-      <div className="flex flex-col flex-1 items-center justify-center w-full max-w-2xl mx-auto">
+      <div className="flex flex-col flex-1 items-center justify-center w-full max-w-2xl">
         {/* Problem label */}
         <div className="w-full mb-2">
           <span
@@ -196,6 +196,34 @@ export default function ClarifyPage() {
               >
                 {questions[step]}
               </h2>
+
+              {/* Option chips */}
+              {session.clarifications[step]?.options?.length ? (
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {session.clarifications[step].options!.map((opt, i) => {
+                    const selected = answers[step] === opt;
+                    return (
+                      <button
+                        key={i}
+                        onClick={() => updateAnswer(selected ? "" : opt)}
+                        style={{
+                          padding: "6px 14px",
+                          borderRadius: 999,
+                          border: `1px solid ${selected ? "var(--color-primary)" : "var(--color-border)"}`,
+                          background: selected ? "rgba(99,102,241,0.1)" : "var(--color-surface)",
+                          color: selected ? "var(--color-primary)" : "var(--color-text-muted)",
+                          fontSize: 13,
+                          fontFamily: "inherit",
+                          cursor: "pointer",
+                          transition: "all 0.15s",
+                        }}
+                      >
+                        {opt}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : null}
 
               {/* Answer textarea */}
               <textarea

@@ -1,6 +1,7 @@
 export interface ClarificationQA {
   question: string;
   answer: string;
+  options?: string[];
 }
 
 export interface Revision {

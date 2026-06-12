@@ -131,7 +131,7 @@ export default function HomePage() {
         id: res.session_id,
         problem: res.problem,
         model: res.model,
-        clarifications: res.questions.map((q) => ({ question: q, answer: "" })),
+        clarifications: res.questions.map((q) => ({ question: q.question, answer: "", options: q.options })),
         architecture: {
           llm_suggested_mermaid: "",
           llm_explanation: "",

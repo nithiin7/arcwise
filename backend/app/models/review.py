@@ -24,5 +24,5 @@ class Review(BaseModel):
     strengths: list[str]
     gaps: list[str]
     improvements: list[Improvement]
-    reference_architecture_note: str
-    scale_verified: bool
+    reference_architecture_note: str = ""
+    scale_verified: bool = False

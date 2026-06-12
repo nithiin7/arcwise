@@ -98,5 +98,6 @@ def extract_json(text: str) -> dict[str, Any]:
     if stripped.startswith("```"):
         stripped = re.sub(r"^```(?:json)?\s*\n?", "", stripped)
         stripped = re.sub(r"\n?```\s*$", "", stripped)
+    stripped = re.sub(r",\s*([}\]])", r"\1", stripped)
     result: dict[str, Any] = json.loads(stripped.strip())
     return result

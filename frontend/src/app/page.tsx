@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useRef, KeyboardEvent } from "react";
+import { useState, useRef, useEffect, KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import * as api from "@/lib/api";
+import type { SessionSummary } from "@/lib/api";
 import { useSessionStore } from "@/store/sessionStore";
 import { useSettingsStore } from "@/store/settingsStore";
 import ModelSelect from "@/components/ModelSelect";
@@ -106,6 +107,33 @@ function Spinner() {
   );
 }
 
+function statusLabel(status: SessionSummary["status"]) {
+  switch (status) {
+    case "complete": return "Complete";
+    case "reviewing": return "Reviewing";
+    case "designing": return "Designing";
+    default: return "Clarifying";
+  }
+}
+
+function statusColor(status: SessionSummary["status"]) {
+  switch (status) {
+    case "complete": return "var(--color-success, #22c55e)";
+    case "reviewing": return "var(--color-primary)";
+    case "designing": return "#f59e0b";
+    default: return "var(--color-text-faint)";
+  }
+}
+
+function sessionHref(s: SessionSummary) {
+  switch (s.status) {
+    case "complete":
+    case "reviewing": return `/session/${s.id}/review`;
+    case "designing": return `/session/${s.id}/design`;
+    default: return `/session/${s.id}/clarify`;
+  }
+}
+
 export default function HomePage() {
   const router = useRouter();
   const setSession = useSessionStore((s) => s.setSession);
@@ -114,7 +142,12 @@ export default function HomePage() {
   const [model, setModel] = useState(DEFAULT_MODEL);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [history, setHistory] = useState<SessionSummary[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    api.listSessions().then(setHistory).catch(() => {});
+  }, []);
 
   const storedKey = getKeyForModel(model);
   const isLocalModel = model.startsWith("ollama/");
@@ -409,6 +442,66 @@ export default function HomePage() {
             </motion.button>
           ))}
         </div>
+
+        {/* Recent designs */}
+        {history.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.5, duration: 0.4 }}
+            style={{ width: "100%", marginTop: 40 }}
+          >
+            <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--color-text-faint)", marginBottom: 10 }}>
+              Recent designs
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              {history.map((s) => (
+                <Link
+                  key={s.id}
+                  href={sessionHref(s)}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    padding: "10px 14px",
+                    borderRadius: "var(--radius-sm)",
+                    border: "1px solid var(--color-border)",
+                    background: "var(--color-surface)",
+                    textDecoration: "none",
+                    transition: "border-color 0.15s",
+                  }}
+                  onMouseEnter={(e) => ((e.currentTarget as HTMLAnchorElement).style.borderColor = "var(--color-primary)")}
+                  onMouseLeave={(e) => ((e.currentTarget as HTMLAnchorElement).style.borderColor = "var(--color-border)")}
+                >
+                  {/* Status dot */}
+                  <span style={{ width: 7, height: 7, borderRadius: "50%", background: statusColor(s.status), flexShrink: 0 }} />
+
+                  {/* Problem */}
+                  <span style={{ flex: 1, fontSize: 13, color: "var(--color-text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {s.problem}
+                  </span>
+
+                  {/* Score badge */}
+                  {s.overall_score !== null && (
+                    <span style={{ fontSize: 12, fontWeight: 600, color: "var(--color-primary)", flexShrink: 0 }}>
+                      {s.overall_score}/10
+                    </span>
+                  )}
+
+                  {/* Status label */}
+                  <span style={{ fontSize: 11, color: statusColor(s.status), flexShrink: 0, minWidth: 60, textAlign: "right" }}>
+                    {statusLabel(s.status)}
+                  </span>
+
+                  {/* Date */}
+                  <span style={{ fontSize: 11, color: "var(--color-text-faint)", flexShrink: 0 }}>
+                    {new Date(s.created_at).toLocaleDateString()}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </motion.div>
+        )}
       </motion.div>
     </div>
   );

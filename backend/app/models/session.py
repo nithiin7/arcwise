@@ -5,6 +5,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 from app.core.config import settings
+from app.models.review import Review
 
 
 class ClarificationQA(BaseModel):
@@ -39,6 +40,7 @@ class Session(BaseModel):
     clarifications: list[ClarificationQA] = Field(default_factory=list)
     architecture: Architecture = Field(default_factory=Architecture)
     status: Literal["clarifying", "designing", "reviewing", "complete"] = "clarifying"
+    review: Review | None = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 

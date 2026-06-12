@@ -118,3 +118,16 @@ export function reviewDesign(sessionId: string): Promise<Review> {
 export function getOllamaModels(): Promise<{ models: string[] }> {
   return request<{ models: string[] }>("/models/ollama");
 }
+
+export interface SessionSummary {
+  id: string;
+  problem: string;
+  model: string;
+  status: "clarifying" | "designing" | "reviewing" | "complete";
+  overall_score: number | null;
+  created_at: string;
+}
+
+export function listSessions(): Promise<SessionSummary[]> {
+  return request<SessionSummary[]>("/sessions");
+}

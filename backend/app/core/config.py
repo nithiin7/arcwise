@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     groq_api_key: str | None = None
     ollama_base_url: str = "http://localhost:11434"
     default_model: str = "claude-sonnet-4-6"
+    database_url: str = "postgresql+asyncpg://arcwise:arcwise@localhost:5432/arcwise"
     redis_url: str = "redis://localhost:6379"
     use_redis: bool = False
     cors_origins: list[str] = ["http://localhost:3000"]

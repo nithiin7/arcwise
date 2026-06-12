@@ -81,12 +81,14 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 ```
 arcwise/
 ├── backend/               # Python 3.12 / FastAPI
+│   ├── alembic/           # DB migrations (alembic upgrade head to apply)
 │   └── app/
 │       ├── api/routes/    # Session, clarify, architecture, refine, review
 │       ├── agents/        # Claude-powered agents (clarification, suggester, refiner, reviewer)
+│       ├── db/            # SQLAlchemy async engine, ORM models, declarative base
 │       ├── knowledge/     # Reference architectures + problem definitions
 │       ├── models/        # Pydantic request/response models
-│       ├── services/      # claude.py (Anthropic SDK), session_store.py (in-memory)
+│       ├── services/      # llm.py (LiteLLM), session_store.py (PostgreSQL via SQLAlchemy)
 │       └── core/          # Config (Pydantic Settings), logging
 └── frontend/              # Next.js 16 App Router + TypeScript
     └── src/
@@ -100,19 +102,33 @@ arcwise/
 ### Session Flow
 
 ```
-POST /sessions           → Claude generates 5 clarifying questions
-POST /sessions/:id/clarify → User answers; session saved
-POST /sessions/:id/architecture → Claude suggests Mermaid diagram
-POST /sessions/:id/refine → Iterative diagram updates
-POST /sessions/:id/review  → Scored evaluation (5 dimensions, 1–10)
+GET  /sessions             → List all sessions (for home page history)
+POST /sessions             → Claude generates 5 clarifying questions
+POST /sessions/:id/clarify → User answers; session saved to DB
+POST /sessions/:id/architecture/suggest → Claude suggests Mermaid diagram
+POST /sessions/:id/architecture/submit  → Lock diagram, move to review
+POST /sessions/:id/refine  → Iterative diagram updates
+POST /sessions/:id/review  → Scored evaluation (5 dimensions, 1–10); review saved on session
 ```
 
 ### Running Locally
 
+**Postgres** (required — local port 5433 to avoid conflict with system Postgres on 5432):
+```bash
+docker compose up -d postgres
+```
+
 **Backend** (from `backend/`):
 ```bash
 source .venv/bin/activate
-uvicorn app.main:app --reload   # http://localhost:8000
+python -m uvicorn app.main:app --reload   # http://localhost:8000
+# Note: use `python -m uvicorn`, not bare `uvicorn` — the reloader subprocess needs the venv Python
+```
+
+**Run migrations** (first time, or after `git pull` with new migrations):
+```bash
+source .venv/bin/activate
+alembic upgrade head
 ```
 
 **Frontend** (from `frontend/`):
@@ -128,12 +144,14 @@ docker compose up
 
 ### Backend Guidelines
 
-- All AI calls go through `app/services/claude.py` — `complete()` for single-turn, `stream_complete()` for streaming, `extract_json()` for structured output.
-- Sessions are stored in-memory via `session_store.py`; no database yet. Don't add persistence unless asked.
-- Agents live in `app/agents/` and are single-responsibility (one Claude interaction per agent).
+- All AI calls go through `app/services/llm.py` — `complete()` for single-turn, `stream_complete()` for streaming, `extract_json()` for structured output.
+- Sessions are persisted to PostgreSQL via `app/services/session_store.py` (SQLAlchemy async + asyncpg). The store interface (`get_session`, `save_session`, `delete_session`, `list_sessions`) is the only way routes touch the DB — never import `AsyncSessionLocal` directly in routes.
+- Schema changes go through Alembic migrations in `alembic/versions/`. Run `alembic upgrade head` to apply. The `create_all` in `main.py` is a dev convenience only.
+- Agents live in `app/agents/` and are single-responsibility (one LLM interaction per agent).
 - Use Pydantic models for all request/response shapes. Don't bypass them with raw dicts.
 - Ruff enforces linting; mypy enforces types. Run `ruff check` and `mypy` before declaring backend work done.
 - Environment config is centralized in `app/core/config.py` (Pydantic `Settings`). Don't hardcode values.
+- `DATABASE_URL` uses `postgresql+asyncpg://` scheme. Local dev connects to Docker Postgres on port 5433 (5432 is taken by the system Postgres).
 
 ### Frontend Guidelines
 

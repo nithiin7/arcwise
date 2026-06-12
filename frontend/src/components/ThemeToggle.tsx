@@ -16,7 +16,7 @@ export function ThemeToggle() {
       title={isDark ? "Switch to light mode" : "Switch to dark mode"}
       style={{
         position: "fixed",
-        top: 16,
+        bottom: 16,
         left: 20,
         display: "flex",
         alignItems: "center",

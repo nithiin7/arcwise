@@ -53,7 +53,7 @@ function sessionHref(s: SessionSummary) {
   switch (s.status) {
     case "complete":
     case "reviewing":
-      return `/session/${s.id}/review`;
+      return `/session/${s.id}/design`;
     case "designing":
       return `/session/${s.id}/design`;
     default:

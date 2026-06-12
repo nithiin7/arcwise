@@ -12,15 +12,20 @@ import { toast } from "sonner";
 import * as api from "@/api";
 import { chatMessageSchema, type ChatMessageForm } from "@/lib/schemas";
 import { useSessionStore } from "@/store/sessionStore";
+import { scoreColor } from "@/lib/utils";
 import type { Revision } from "@/types";
 import { ArchitectureCanvas } from "@/components/design/ArchitectureCanvas";
 import { ComponentJustifications } from "@/components/design/ComponentJustifications";
 import { RevisionTimeline } from "@/components/design/RevisionTimeline";
 import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import BackArrow from "@/components/icons/BackArrow";
 import SendIcon from "@/components/icons/SendIcon";
 import Spinner from "@/components/icons/Spinner";
+import { SCORE_KEYS, PRIORITY_COLORS } from "@/constants/review";
+
+type Tab = "refine" | "review";
 
 export default function DesignPage() {
   const router = useRouter();
@@ -28,12 +33,19 @@ export default function DesignPage() {
   const sessionId = params.id;
 
   const session = useSessionStore((s) => s.session);
+  const review = useSessionStore((s) => s.review);
   const chatMessages = useSessionStore((s) => s.chatMessages);
   const updateArchitectureMermaid = useSessionStore((s) => s.updateArchitectureMermaid);
   const addChatMessage = useSessionStore((s) => s.addChatMessage);
   const setSession = useSessionStore((s) => s.setSession);
+  const setReview = useSessionStore((s) => s.setReview);
+  const reset = useSessionStore((s) => s.reset);
 
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
+  const [activeTab, setActiveTab] = useState<Tab>(() => {
+    const { review, session: s } = useSessionStore.getState();
+    return review || s?.review ? "review" : "refine";
+  });
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputFocusRef = useRef<HTMLInputElement | null>(null);
@@ -60,8 +72,19 @@ export default function DesignPage() {
   );
 
   useEffect(() => {
-    if (session) return;
-    api.getSession(sessionId).then(setSession).catch(() => router.replace("/"));
+    if (session) {
+      if (session.review) {
+        setReview(session.review);
+      }
+      return;
+    }
+    api.getSession(sessionId).then((s) => {
+      setSession(s);
+      if (s.review) {
+        setReview(s.review);
+        setActiveTab("review");
+      }
+    }).catch(() => router.replace("/"));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -141,10 +164,19 @@ export default function DesignPage() {
     },
   });
 
+  const reviewMutation = useMutation({
+    mutationFn: () => api.reviewDesign(sessionId),
+    onSuccess: (r) => setReview(r),
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : "Failed to generate review.");
+    },
+  });
+
   const submitMutation = useMutation({
     mutationFn: () => api.submitArchitecture(sessionId),
     onSuccess: () => {
-      router.push(`/session/${sessionId}/review`);
+      setActiveTab("review");
+      reviewMutation.mutate();
     },
     onError: (err) => {
       toast.error(err instanceof Error ? err.message : "Failed to submit architecture.");
@@ -180,6 +212,9 @@ export default function DesignPage() {
     resetChat();
   }
 
+  const hasReview = review !== null;
+  const isReviewing = submitMutation.isPending || reviewMutation.isPending;
+
   return (
     <div
       style={{
@@ -204,7 +239,7 @@ export default function DesignPage() {
       >
         <Button
           variant="secondary"
-          onClick={() => router.back()}
+          onClick={() => { reset(); router.push("/dashboard"); }}
           style={{ width: 28, height: 28, padding: 0 }}
         >
           <BackArrow />
@@ -224,16 +259,21 @@ export default function DesignPage() {
           {session.problem}
         </span>
 
-        <Button onClick={() => submitMutation.mutate()} disabled={!currentMermaid || submitMutation.isPending}>
-          {submitMutation.isPending ? (
-            <>
-              <Spinner />
-              <span>Submitting…</span>
-            </>
-          ) : (
-            "Submit for Review →"
-          )}
-        </Button>
+        {!hasReview && (
+          <Button
+            onClick={() => submitMutation.mutate()}
+            disabled={!currentMermaid || isReviewing}
+          >
+            {isReviewing ? (
+              <>
+                <Spinner />
+                <span>{submitMutation.isPending ? "Submitting…" : "Reviewing…"}</span>
+              </>
+            ) : (
+              "Submit for Review →"
+            )}
+          </Button>
+        )}
       </header>
 
       {/* Body */}
@@ -302,175 +342,400 @@ export default function DesignPage() {
             flexShrink: 0,
           }}
         >
-          {/* Scale callout */}
-          {arch.scale_assumption && (
+          {/* Tab bar — only show when review exists or is being generated */}
+          {(hasReview || isReviewing) && (
             <div
               style={{
-                padding: "8px 16px",
-                background: "rgba(245,158,11,0.08)",
-                borderBottom: "1px solid rgba(245,158,11,0.2)",
                 display: "flex",
-                alignItems: "center",
-                gap: 8,
+                borderBottom: "1px solid var(--color-border)",
                 flexShrink: 0,
               }}
             >
-              <span style={{ fontSize: 14 }}>⚡</span>
-              <span
-                style={{
-                  fontSize: 12,
-                  fontWeight: 500,
-                  color: "var(--color-warning)",
-                  lineHeight: 1.4,
-                }}
-              >
-                {arch.scale_assumption}
-              </span>
+              {(["refine", "review"] as Tab[]).map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  style={{
+                    flex: 1,
+                    padding: "10px 0",
+                    fontSize: 13,
+                    fontWeight: 500,
+                    fontFamily: "inherit",
+                    border: "none",
+                    borderBottom: activeTab === tab
+                      ? "2px solid var(--color-primary)"
+                      : "2px solid transparent",
+                    background: "transparent",
+                    color: activeTab === tab ? "var(--color-text)" : "var(--color-text-faint)",
+                    cursor: "pointer",
+                    transition: "color 0.15s",
+                    textTransform: "capitalize",
+                  }}
+                >
+                  {tab}
+                </button>
+              ))}
             </div>
           )}
 
-          {/* Chat messages */}
-          <div
-            style={{
-              flex: 1,
-              overflowY: "auto",
-              padding: "12px 12px 8px",
-              display: "flex",
-              flexDirection: "column",
-              gap: 8,
-            }}
-          >
-            {/* Initial AI explanation */}
-            {arch.llm_explanation && (
+          {/* Refine tab */}
+          {activeTab === "refine" && (
+            <>
+              {arch.scale_assumption && (
+                <div
+                  style={{
+                    padding: "8px 16px",
+                    background: "rgba(245,158,11,0.08)",
+                    borderBottom: "1px solid rgba(245,158,11,0.2)",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    flexShrink: 0,
+                  }}
+                >
+                  <span style={{ fontSize: 14 }}>⚡</span>
+                  <span
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 500,
+                      color: "var(--color-warning)",
+                      lineHeight: 1.4,
+                    }}
+                  >
+                    {arch.scale_assumption}
+                  </span>
+                </div>
+              )}
+
               <div
                 style={{
-                  background: "var(--color-surface)",
-                  borderRadius: "var(--radius-md)",
-                  padding: "10px 12px",
+                  flex: 1,
+                  overflowY: "auto",
+                  padding: "12px 12px 8px",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 8,
                 }}
               >
-                <p
-                  style={{
-                    fontSize: 13,
-                    color: "var(--color-text-muted)",
-                    lineHeight: 1.6,
-                    margin: 0,
-                  }}
-                >
-                  {arch.llm_explanation}
-                </p>
-              </div>
-            )}
-
-            {/* Chat messages */}
-            <AnimatePresence initial={false}>
-              {chatMessages.map((msg, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: msg.role === "user" ? "flex-end" : "flex-start",
-                  }}
-                >
+                {arch.llm_explanation && (
                   <div
                     style={{
-                      maxWidth: "85%",
-                      background:
-                        msg.role === "user"
-                          ? "rgba(99,102,241,0.15)"
-                          : "var(--color-surface)",
+                      background: "var(--color-surface)",
                       borderRadius: "var(--radius-md)",
-                      padding: "8px 12px",
+                      padding: "10px 12px",
                     }}
                   >
                     <p
                       style={{
                         fontSize: 13,
-                        color: "var(--color-text)",
+                        color: "var(--color-text-muted)",
                         lineHeight: 1.6,
                         margin: 0,
                       }}
                     >
-                      {msg.content}
+                      {arch.llm_explanation}
                     </p>
-                    {msg.diff_summary && (
-                      <p
+                  </div>
+                )}
+
+                <AnimatePresence initial={false}>
+                  {chatMessages.map((msg, i) => (
+                    <motion.div
+                      key={i}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: msg.role === "user" ? "flex-end" : "flex-start",
+                      }}
+                    >
+                      <div
                         style={{
-                          fontFamily: "monospace",
-                          fontSize: 11,
-                          color: "var(--color-success)",
-                          marginTop: 6,
-                          marginBottom: 0,
-                          lineHeight: 1.5,
+                          maxWidth: "85%",
+                          background:
+                            msg.role === "user"
+                              ? "rgba(99,102,241,0.15)"
+                              : "var(--color-surface)",
+                          borderRadius: "var(--radius-md)",
+                          padding: "8px 12px",
                         }}
                       >
-                        {msg.diff_summary}
-                      </p>
-                    )}
-                  </div>
-                </motion.div>
-              ))}
-            </AnimatePresence>
+                        <p
+                          style={{
+                            fontSize: 13,
+                            color: "var(--color-text)",
+                            lineHeight: 1.6,
+                            margin: 0,
+                          }}
+                        >
+                          {msg.content}
+                        </p>
+                        {msg.diff_summary && (
+                          <p
+                            style={{
+                              fontFamily: "monospace",
+                              fontSize: 11,
+                              color: "var(--color-success)",
+                              marginTop: 6,
+                              marginBottom: 0,
+                              lineHeight: 1.5,
+                            }}
+                          >
+                            {msg.diff_summary}
+                          </p>
+                        )}
+                      </div>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
 
-            <div ref={chatEndRef} />
-          </div>
+                <div ref={chatEndRef} />
+              </div>
 
-          {/* Component Justifications */}
-          {Object.keys(arch.component_justifications).length > 0 && (
-            <ComponentJustifications
-              justifications={arch.component_justifications}
-            />
+              {Object.keys(arch.component_justifications).length > 0 && (
+                <ComponentJustifications justifications={arch.component_justifications} />
+              )}
+
+              {arch.revisions.length > 0 && (
+                <RevisionTimeline
+                  revisions={arch.revisions}
+                  onRevert={(index) => revertMutation.mutate(index)}
+                  onView={handleView}
+                  viewingIndex={previewIndex}
+                  initialMermaid={arch.llm_suggested_mermaid}
+                />
+              )}
+
+              <div
+                style={{
+                  borderTop: "1px solid var(--color-border)",
+                  padding: "8px 12px",
+                  display: "flex",
+                  gap: 8,
+                  flexShrink: 0,
+                }}
+              >
+                <Input
+                  ref={mergedInputRef}
+                  {...msgRegister}
+                  type="text"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      rhfSubmit(handleSend)();
+                    }
+                  }}
+                  placeholder="Ask for refinements…"
+                  disabled={refineMutation.isPending}
+                  style={{ flex: 1, padding: "8px 10px" }}
+                />
+                <Button
+                  onClick={rhfSubmit(handleSend)}
+                  disabled={refineMutation.isPending || !isChatValid}
+                  style={{ width: 34, height: 34, padding: 0 }}
+                >
+                  {refineMutation.isPending ? <Spinner /> : <SendIcon />}
+                </Button>
+              </div>
+            </>
           )}
 
-          {/* Revision Timeline */}
-          {arch.revisions.length > 0 && (
-            <RevisionTimeline
-              revisions={arch.revisions}
-              onRevert={(index) => revertMutation.mutate(index)}
-              onView={handleView}
-              viewingIndex={previewIndex}
-              initialMermaid={arch.llm_suggested_mermaid}
-            />
+          {/* Review tab */}
+          {activeTab === "review" && (
+            <div style={{ flex: 1, overflowY: "auto", padding: "12px" }}>
+              {isReviewing && !review ? (
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    height: "100%",
+                    gap: 12,
+                    color: "var(--color-text-muted)",
+                  }}
+                >
+                  <Spinner size={20} />
+                  <span style={{ fontSize: 13 }}>Reviewing your design…</span>
+                </div>
+              ) : review ? (
+                <ReviewPanel review={review} />
+              ) : null}
+            </div>
           )}
-
-          {/* Chat input */}
-          <div
-            style={{
-              borderTop: "1px solid var(--color-border)",
-              padding: "8px 12px",
-              display: "flex",
-              gap: 8,
-              flexShrink: 0,
-            }}
-          >
-            <Input
-              ref={mergedInputRef}
-              {...msgRegister}
-              type="text"
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  rhfSubmit(handleSend)();
-                }
-              }}
-              placeholder="Ask for refinements…"
-              disabled={refineMutation.isPending}
-              style={{ flex: 1, padding: "8px 10px" }}
-            />
-            <Button
-              onClick={rhfSubmit(handleSend)}
-              disabled={refineMutation.isPending || !isChatValid}
-              style={{ width: 34, height: 34, padding: 0 }}
-            >
-              {refineMutation.isPending ? <Spinner /> : <SendIcon />}
-            </Button>
-          </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function ReviewPanel({ review }: { review: NonNullable<ReturnType<typeof useSessionStore.getState>["review"]> }) {
+  const { scores, feedback, strengths, gaps, improvements, reference_architecture_note } = review;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      {/* Score grid */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6 }}>
+        {SCORE_KEYS.map(({ key, label }) => {
+          const score = scores[key];
+          const isOverall = key === "overall";
+          return (
+            <div
+              key={key}
+              style={{
+                background: isOverall ? "rgba(99,102,241,0.07)" : "var(--color-surface)",
+                border: isOverall ? "1px solid rgba(99,102,241,0.3)" : "1px solid var(--color-border)",
+                borderRadius: "var(--radius-md)",
+                padding: "10px 8px",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: 4,
+                gridColumn: isOverall ? "span 3" : undefined,
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "baseline", gap: 2 }}>
+                <span
+                  className={scoreColor(score)}
+                  style={{ fontSize: isOverall ? 32 : 22, fontWeight: 700, lineHeight: 1 }}
+                >
+                  {score}
+                </span>
+                <span style={{ fontSize: 11, color: "var(--color-text-faint)" }}>/10</span>
+              </div>
+              <span
+                style={{
+                  fontSize: 10,
+                  fontWeight: 600,
+                  color: isOverall ? "rgba(99,102,241,0.8)" : "var(--color-text-faint)",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.06em",
+                  textAlign: "center",
+                }}
+              >
+                {label}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Feedback */}
+      <div>
+        <p style={{ fontSize: 10, fontWeight: 600, color: "var(--color-text-faint)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>
+          Feedback
+        </p>
+        <Card style={{ padding: "10px 12px" }}>
+          <p style={{ fontSize: 12, color: "var(--color-text-muted)", lineHeight: 1.6, margin: 0 }}>
+            {feedback}
+          </p>
+        </Card>
+      </div>
+
+      {/* Strengths */}
+      {strengths.length > 0 && (
+        <div>
+          <p style={{ fontSize: 10, fontWeight: 600, color: "#22c55e", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>
+            ✓ Strengths
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            {strengths.map((s, i) => (
+              <div key={i} style={{ display: "flex", gap: 6, alignItems: "flex-start" }}>
+                <span style={{ color: "rgba(34,197,94,0.5)", flexShrink: 0, fontSize: 12 }}>•</span>
+                <span style={{ fontSize: 12, color: "var(--color-text-muted)", lineHeight: 1.5 }}>{s}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Gaps */}
+      {gaps.length > 0 && (
+        <div>
+          <p style={{ fontSize: 10, fontWeight: 600, color: "#ef4444", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>
+            ✗ Gaps
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            {gaps.map((g, i) => (
+              <div key={i} style={{ display: "flex", gap: 6, alignItems: "flex-start" }}>
+                <span style={{ color: "rgba(239,68,68,0.5)", flexShrink: 0, fontSize: 12 }}>•</span>
+                <span style={{ fontSize: 12, color: "var(--color-text-muted)", lineHeight: 1.5 }}>{g}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Improvements */}
+      {improvements.length > 0 && (
+        <div>
+          <p style={{ fontSize: 10, fontWeight: 600, color: "var(--color-text-faint)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>
+            Improvements
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {improvements.map((imp, i) => {
+              const colors = PRIORITY_COLORS[imp.priority] ?? PRIORITY_COLORS.medium;
+              return (
+                <Card key={i} style={{ padding: "10px 12px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+                    <span
+                      style={{
+                        fontSize: 10,
+                        fontWeight: 600,
+                        background: colors.bg,
+                        color: colors.text,
+                        padding: "2px 6px",
+                        borderRadius: 999,
+                        textTransform: "uppercase",
+                        letterSpacing: "0.06em",
+                      }}
+                    >
+                      {imp.priority}
+                    </span>
+                  </div>
+                  <p style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text)", marginBottom: 3, lineHeight: 1.4 }}>
+                    {imp.gap}
+                  </p>
+                  <p style={{ fontSize: 12, color: "var(--color-text-muted)", marginBottom: imp.components.length > 0 ? 8 : 0, lineHeight: 1.5 }}>
+                    {imp.fix}
+                  </p>
+                  {imp.components.length > 0 && (
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                      {imp.components.map((c, j) => (
+                        <span
+                          key={j}
+                          style={{
+                            fontSize: 10,
+                            fontWeight: 500,
+                            background: "rgba(99,102,241,0.1)",
+                            color: "rgba(99,102,241,0.9)",
+                            padding: "2px 6px",
+                            borderRadius: 999,
+                            border: "1px solid rgba(99,102,241,0.2)",
+                          }}
+                        >
+                          {c}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {reference_architecture_note && (
+        <Card style={{ padding: "10px 12px" }}>
+          <p style={{ fontSize: 11, color: "var(--color-text-faint)", lineHeight: 1.6, margin: 0 }}>
+            <span style={{ fontWeight: 600, color: "var(--color-text-muted)" }}>📚 Reference:</span>{" "}
+            {reference_architecture_note}
+          </p>
+        </Card>
+      )}
     </div>
   );
 }

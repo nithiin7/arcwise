@@ -300,7 +300,22 @@ export default function DesignPage() {
           Share
         </Button>
 
-        {!hasReview && (
+        {hasReview ? (
+          <Button
+            variant="secondary"
+            onClick={() => { setActiveTab("review"); reviewMutation.mutate(); }}
+            disabled={reviewMutation.isPending}
+          >
+            {reviewMutation.isPending ? (
+              <>
+                <Spinner />
+                <span>Regenerating…</span>
+              </>
+            ) : (
+              "Regenerate Score"
+            )}
+          </Button>
+        ) : (
           <Button
             onClick={() => submitMutation.mutate()}
             disabled={!currentMermaid || isReviewing}
@@ -847,7 +862,28 @@ export default function DesignPage() {
                   <span style={{ fontSize: 13 }}>Reviewing your design…</span>
                 </div>
               ) : review ? (
-                <ReviewPanel review={review} />
+                <>
+                  {reviewMutation.isPending && (
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        marginBottom: 14,
+                        padding: "8px 12px",
+                        background: "rgba(99,102,241,0.08)",
+                        border: "1px solid rgba(99,102,241,0.2)",
+                        borderRadius: "var(--radius-md)",
+                      }}
+                    >
+                      <Spinner size={14} />
+                      <span style={{ fontSize: 12, color: "var(--color-text-muted)" }}>
+                        Regenerating score…
+                      </span>
+                    </div>
+                  )}
+                  <ReviewPanel review={review} />
+                </>
               ) : null}
             </div>
           )}

@@ -147,9 +147,9 @@ export default function LandingPage() {
               marginBottom: 20,
             }}
           >
-            Master system design
+            Design and evaluate
             <br />
-            with an AI coach
+            systems with AI
           </h1>
 
           <p
@@ -163,7 +163,7 @@ export default function LandingPage() {
             }}
           >
             Describe a system. Get clarifying questions, an architecture diagram,
-            iterative refinement, and a scored review — all in one flow.
+            iterative refinement, and an expert analysis — all in one flow.
           </p>
 
           <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
@@ -486,7 +486,7 @@ export default function LandingPage() {
           </span>
         </div>
         <p style={{ fontSize: 12, color: "var(--color-text-faint)" }}>
-          AI-powered system design coach
+          AI system design platform
         </p>
         <Link
           href="/settings"

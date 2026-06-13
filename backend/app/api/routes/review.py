@@ -1,11 +1,13 @@
-from typing import Any
+import json
+from collections.abc import AsyncGenerator
 
 from fastapi import APIRouter, Depends
+from fastapi.responses import StreamingResponse
 
-from app.agents.reviewer import review_design
+from app.agents.reviewer import stream_review_design
 from app.api.deps import get_session_or_404
 from app.models.review import Review
-from app.models.session import Session, TokenUsage
+from app.models.session import Session
 from app.services.session_store import save_session
 
 router = APIRouter()
@@ -15,15 +17,20 @@ router = APIRouter()
 async def review(
     session_id: str,
     session: Session = Depends(get_session_or_404),
-) -> dict[str, Any]:
-    result, usage = await review_design(session)
-    session.status = "complete"
-    session.review = Review(**result)
-    session.token_usage = session.token_usage + TokenUsage(
-        prompt_tokens=usage.prompt_tokens,
-        completion_tokens=usage.completion_tokens,
-        total_tokens=usage.total_tokens,
-        cost_usd=usage.cost_usd,
+) -> StreamingResponse:
+    async def event_stream() -> AsyncGenerator[str, None]:
+        try:
+            async for event in stream_review_design(session):
+                if event["type"] == "done":
+                    session.status = "complete"
+                    session.review = Review(**event["review"])
+                    await save_session(session)
+                yield f"data: {json.dumps(event)}\n\n"
+        except Exception as e:
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
-    await save_session(session)
-    return result

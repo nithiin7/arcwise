@@ -434,7 +434,7 @@ export default function SharePage() {
 
         {/* Footer */}
         <p style={{ fontSize: 12, color: "var(--color-text-faint)", textAlign: "center", marginTop: 8 }}>
-          Generated with Arcwise — AI-powered system design coach
+          Generated with Arcwise — AI system design platform
         </p>
       </div>
     </div>

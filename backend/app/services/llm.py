@@ -109,6 +109,7 @@ async def stream_complete(
     model: str,
     api_key: str | None = None,
     max_tokens: int = 4096,
+    json_mode: bool = False,
 ) -> AsyncGenerator[str, None]:
     response = await acompletion(
         model=model,
@@ -119,7 +120,7 @@ async def stream_complete(
         max_tokens=max_tokens,
         api_key=_resolve_api_key(model, api_key),
         stream=True,
-        **_extra_kwargs(model),
+        **_extra_kwargs(model, json_mode),
     )
     async for chunk in response:
         delta = chunk.choices[0].delta.content

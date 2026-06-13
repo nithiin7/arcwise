@@ -12,23 +12,23 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: {
-    default: "Arcwise — AI System Design Coach",
+    default: "Arcwise — AI System Design Platform",
     template: "%s | Arcwise",
   },
   description:
-    "Master system design with an AI coach. Get clarifying questions, architecture diagrams, iterative refinement, and scored reviews — all in one flow.",
-  keywords: ["system design", "AI", "architecture", "interview prep", "software engineering"],
+    "Design and evaluate production-grade architectures with AI. Requirements, diagrams, iterative refinement, and expert analysis — all in one flow.",
+  keywords: ["system design", "AI", "architecture", "software engineering", "technical review"],
   openGraph: {
-    title: "Arcwise — AI System Design Coach",
+    title: "Arcwise — AI System Design Platform",
     description:
-      "Master system design with an AI coach. Get architecture diagrams, iterative refinement, and scored reviews.",
+      "AI-powered system design analysis. Architecture diagrams, iterative refinement, and expert evaluation.",
     type: "website",
     siteName: "Arcwise",
   },
   twitter: {
     card: "summary",
-    title: "Arcwise — AI System Design Coach",
-    description: "Master system design with an AI coach. Architecture diagrams, refinement, and scored reviews.",
+    title: "Arcwise — AI System Design Platform",
+    description: "AI-powered system design analysis. Architecture diagrams, refinement, and expert evaluation.",
   },
   icons: {
     icon: [

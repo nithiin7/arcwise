@@ -45,6 +45,7 @@ export default function DesignPage() {
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [codeEditorOpen, setCodeEditorOpen] = useState(false);
+  const [streamingFeedback, setStreamingFeedback] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>(() => {
     const { review, session: s } = useSessionStore.getState();
     return review || s?.review ? "review" : "refine";
@@ -169,9 +170,17 @@ export default function DesignPage() {
   });
 
   const reviewMutation = useMutation({
-    mutationFn: () => api.reviewDesign(sessionId),
-    onSuccess: (r) => setReview(r),
+    mutationFn: () =>
+      api.streamReviewDesign(sessionId, (chunk) =>
+        setStreamingFeedback((prev) => (prev ?? "") + chunk),
+      ),
+    onMutate: () => setStreamingFeedback(""),
+    onSuccess: (r) => {
+      setStreamingFeedback(null);
+      setReview(r);
+    },
     onError: (err) => {
+      setStreamingFeedback(null);
       toast.error(err instanceof Error ? err.message : "Failed to generate review.");
     },
   });
@@ -334,10 +343,10 @@ export default function DesignPage() {
             {reviewMutation.isPending ? (
               <>
                 <Spinner />
-                <span>Regenerating…</span>
+                <span>Re-analyzing…</span>
               </>
             ) : (
-              "Regenerate Score"
+              "Re-analyze"
             )}
           </Button>
         ) : (
@@ -348,10 +357,10 @@ export default function DesignPage() {
             {isReviewing ? (
               <>
                 <Spinner />
-                <span>{submitMutation.isPending ? "Submitting…" : "Reviewing…"}</span>
+                <span>{submitMutation.isPending ? "Submitting…" : "Analyzing…"}</span>
               </>
             ) : (
-              "Submit for Review →"
+              "Analyze Design →"
             )}
           </Button>
         )}
@@ -885,39 +894,70 @@ export default function DesignPage() {
               style={{ flex: 1, overflowY: "auto", padding: "16px" }}
             >
               {isReviewing && !review ? (
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    height: "100%",
-                    gap: 12,
-                    color: "var(--color-text-muted)",
-                  }}
-                >
-                  <Spinner size={20} />
-                  <span style={{ fontSize: 13 }}>Reviewing your design…</span>
-                </div>
+                streamingFeedback ? (
+                  <div style={{ padding: "16px", overflowY: "auto" }}>
+                    <p
+                      style={{
+                        fontSize: 10,
+                        fontWeight: 600,
+                        color: "var(--color-text-faint)",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.08em",
+                        marginBottom: 8,
+                      }}
+                    >
+                      Feedback
+                    </p>
+                    <p
+                      style={{
+                        fontSize: 13,
+                        color: "var(--color-text-muted)",
+                        lineHeight: 1.6,
+                        margin: 0,
+                      }}
+                    >
+                      {streamingFeedback}
+                    </p>
+                  </div>
+                ) : (
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      height: "100%",
+                      gap: 12,
+                      color: "var(--color-text-muted)",
+                    }}
+                  >
+                    <Spinner size={20} />
+                    <span style={{ fontSize: 13 }}>Analyzing your design…</span>
+                  </div>
+                )
               ) : review ? (
                 <>
                   {reviewMutation.isPending && (
                     <div
                       style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 8,
                         marginBottom: 14,
-                        padding: "8px 12px",
-                        background: "rgba(99,102,241,0.08)",
-                        border: "1px solid rgba(99,102,241,0.2)",
+                        padding: "10px 12px",
+                        background: "rgba(99,102,241,0.06)",
+                        border: "1px solid rgba(99,102,241,0.15)",
                         borderRadius: "var(--radius-md)",
                       }}
                     >
-                      <Spinner size={14} />
-                      <span style={{ fontSize: 12, color: "var(--color-text-muted)" }}>
-                        Regenerating score…
-                      </span>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: streamingFeedback ? 6 : 0 }}>
+                        <Spinner size={12} />
+                        <span style={{ fontSize: 11, fontWeight: 600, color: "rgba(99,102,241,0.7)", textTransform: "uppercase", letterSpacing: "0.07em" }}>
+                          Re-analyzing
+                        </span>
+                      </div>
+                      {streamingFeedback && (
+                        <p style={{ fontSize: 12, color: "var(--color-text-muted)", lineHeight: 1.6, margin: 0 }}>
+                          {streamingFeedback}
+                        </p>
+                      )}
                     </div>
                   )}
                   <ReviewPanel review={review} />

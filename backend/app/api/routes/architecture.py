@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 
 from app.agents.suggester import suggest_architecture
 from app.api.deps import get_session_or_404
-from app.models.session import Session, SubmitArchitectureRequest
+from app.models.session import Session, SubmitArchitectureRequest, UpdateMermaidRequest
 from app.services.session_store import save_session
 
 router = APIRouter()
@@ -25,6 +25,17 @@ async def architecture_suggest(
         "component_justifications": result.get("component_justifications", {}),
         "scale_assumption": result.get("scale_assumption", ""),
     }
+
+
+@router.patch("/{session_id}/architecture/mermaid")
+async def architecture_update_mermaid(
+    session_id: str,
+    body: UpdateMermaidRequest,
+    session: Session = Depends(get_session_or_404),
+) -> dict:
+    session.architecture.final_mermaid = body.mermaid
+    await save_session(session)
+    return {"ok": True}
 
 
 @router.post("/{session_id}/architecture/submit")

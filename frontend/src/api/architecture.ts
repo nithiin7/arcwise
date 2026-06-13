@@ -1,4 +1,4 @@
-import { post } from "@/lib/api";
+import { post, patch } from "@/lib/api";
 
 export interface SuggestArchitectureResponse {
   explanation: string;
@@ -33,6 +33,10 @@ export function revertRevision(
   revisionIndex: number,
 ): Promise<RevertRevisionResponse> {
   return post(`/sessions/${sessionId}/refine/revert/${revisionIndex}`);
+}
+
+export function updateMermaid(sessionId: string, mermaid: string): Promise<{ ok: boolean }> {
+  return patch(`/sessions/${sessionId}/architecture/mermaid`, { mermaid });
 }
 
 export function submitArchitecture(sessionId: string, userDescription?: string): Promise<void> {

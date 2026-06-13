@@ -110,6 +110,7 @@ export interface ArchitectureCanvasProps {
   mermaid: string;
   isLoading: boolean;
   scaleAssumption?: string;
+  onEditCode?: () => void;
 }
 
 export interface ComponentJustificationsProps {

@@ -62,3 +62,7 @@ class RefineArchitectureRequest(BaseModel):
 
 class SubmitArchitectureRequest(BaseModel):
     user_description: str | None = None
+
+
+class UpdateMermaidRequest(BaseModel):
+    mermaid: str

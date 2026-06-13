@@ -15,7 +15,7 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
 
-export function ArchitectureCanvas({ mermaid: diagram, isLoading }: ArchitectureCanvasProps) {
+export function ArchitectureCanvas({ mermaid: diagram, isLoading, onEditCode }: ArchitectureCanvasProps) {
   const [svg, setSvg] = useState("");
   const [svgKey, setSvgKey] = useState(0);
   const [error, setError] = useState("");
@@ -360,6 +360,35 @@ export function ArchitectureCanvas({ mermaid: diagram, isLoading }: Architecture
           >
             ↓
           </button>
+
+          {onEditCode && (
+            <>
+              <div style={{ width: 1, height: 16, background: "var(--color-border)", margin: "0 2px" }} />
+              <button
+                onClick={onEditCode}
+                title="Edit diagram code"
+                style={{
+                  height: 28,
+                  padding: "0 8px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderRadius: "var(--radius-sm)",
+                  border: "none",
+                  background: "transparent",
+                  color: "var(--color-text-muted)",
+                  cursor: "pointer",
+                  fontSize: 11,
+                  fontFamily: "monospace",
+                  fontWeight: 600,
+                  letterSpacing: "-0.5px",
+                  lineHeight: 1,
+                }}
+              >
+                {"</>"}
+              </button>
+            </>
+          )}
         </div>
       )}
     </div>

@@ -16,6 +16,7 @@ import { scoreColor } from "@/lib/utils";
 import type { Revision } from "@/types";
 import { ArchitectureCanvas } from "@/components/design/ArchitectureCanvas";
 import { HistoryArrow, HistoryPill } from "@/components/design/HistoryStrip";
+import { MermaidEditorModal } from "@/components/design/MermaidEditorModal";
 import { ReviewPanel } from "@/components/design/ReviewPanel";
 import { ShareModal } from "@/components/design/ShareModal";
 import { Button } from "@/components/ui/Button";
@@ -43,6 +44,7 @@ export default function DesignPage() {
 
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [codeEditorOpen, setCodeEditorOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>(() => {
     const { review, session: s } = useSessionStore.getState();
     return review || s?.review ? "review" : "refine";
@@ -402,6 +404,7 @@ export default function DesignPage() {
                       mermaid={currentMermaid}
                       isLoading={suggestMutation.isPending}
                       scaleAssumption={arch.scale_assumption}
+                      onEditCode={() => setCodeEditorOpen(true)}
                     />
                   </div>
                 </div>
@@ -411,6 +414,7 @@ export default function DesignPage() {
                 mermaid={currentMermaid}
                 isLoading={suggestMutation.isPending}
                 scaleAssumption={arch.scale_assumption}
+                onEditCode={() => setCodeEditorOpen(true)}
               />
             )}
           </div>
@@ -849,6 +853,17 @@ export default function DesignPage() {
 
       {shareUrl && (
         <ShareModal shareUrl={shareUrl} onClose={() => setShareUrl(null)} />
+      )}
+
+      {codeEditorOpen && (
+        <MermaidEditorModal
+          initialMermaid={currentMermaid}
+          onApply={async (mermaid) => {
+            await api.updateMermaid(sessionId, mermaid);
+            updateArchitectureMermaid(mermaid);
+          }}
+          onClose={() => setCodeEditorOpen(false)}
+        />
       )}
     </div>
   );

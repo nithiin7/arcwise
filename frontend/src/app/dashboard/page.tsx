@@ -328,21 +328,21 @@ export default function HomePage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.5, duration: 0.4 }}
-            style={{ width: "100%", marginTop: 40 }}
+            style={{ width: "100%", marginTop: 44 }}
           >
             <p
               style={{
                 fontSize: 11,
-                fontWeight: 600,
-                letterSpacing: "0.08em",
+                fontWeight: 500,
+                letterSpacing: "0.06em",
                 textTransform: "uppercase",
                 color: "var(--color-text-faint)",
-                marginBottom: 10,
+                marginBottom: 8,
               }}
             >
               Recent designs
             </p>
-            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
               {(showAll ? history : history.slice(0, HISTORY_PAGE_SIZE)).map((s) => (
                 <SessionCard
                   key={s.id}
@@ -357,25 +357,23 @@ export default function HomePage() {
               <button
                 onClick={() => setShowAll((v) => !v)}
                 style={{
-                  marginTop: 8,
+                  marginTop: 6,
                   width: "100%",
-                  padding: "8px",
+                  padding: "7px",
                   borderRadius: "var(--radius-sm)",
-                  border: "1px solid var(--color-border)",
+                  border: "none",
                   background: "transparent",
                   color: "var(--color-text-faint)",
                   fontSize: 12,
                   cursor: "pointer",
-                  transition: "color 0.15s, border-color 0.15s",
+                  transition: "color 0.15s",
                   fontFamily: "inherit",
                 }}
                 onMouseEnter={(e) => {
                   (e.currentTarget as HTMLButtonElement).style.color = "var(--color-text-muted)";
-                  (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--color-primary)";
                 }}
                 onMouseLeave={(e) => {
                   (e.currentTarget as HTMLButtonElement).style.color = "var(--color-text-faint)";
-                  (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--color-border)";
                 }}
               >
                 {showAll ? "Show less" : `Show ${history.length - HISTORY_PAGE_SIZE} more`}

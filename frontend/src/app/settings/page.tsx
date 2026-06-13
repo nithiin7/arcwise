@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ProviderCard } from "@/components/settings/ProviderCard";
 import { PROVIDERS } from "@/constants/settings";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export default function SettingsPage() {
   return (
@@ -17,7 +18,7 @@ export default function SettingsPage() {
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 40 }}>
         <Link
-          href="/"
+          href="/dashboard"
           style={{
             display: "flex",
             alignItems: "center",
@@ -30,6 +31,9 @@ export default function SettingsPage() {
           ← Back
         </Link>
         <h1 style={{ fontSize: 20, fontWeight: 700, color: "var(--color-text)" }}>Settings</h1>
+        <div style={{ marginLeft: "auto" }}>
+          <ThemeToggle inline />
+        </div>
       </div>
 
       {/* API Keys section */}

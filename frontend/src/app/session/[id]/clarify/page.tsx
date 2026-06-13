@@ -26,6 +26,9 @@ export default function ClarifyPage() {
 
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<string[]>(() => Array(questions.length).fill(""));
+  const [stepSelectedOptions, setStepSelectedOptions] = useState<string[][]>(() =>
+    Array(questions.length).fill(null).map(() => [])
+  );
 
   const textareaFocusRef = useRef<HTMLTextAreaElement | null>(null);
 
@@ -95,6 +98,7 @@ export default function ClarifyPage() {
     const prevStep = step - 1;
     setStep(prevStep);
     resetStep({ answer: answers[prevStep] || "" });
+    // stepSelectedOptions[prevStep] already holds the user's prior chip selections
   }
 
   function handleNext() {
@@ -205,11 +209,20 @@ export default function ClarifyPage() {
             {session.clarifications[step]?.options?.length ? (
               <div className="flex flex-wrap gap-2 mb-3" style={{ marginBottom: 16 }}>
                 {session.clarifications[step].options!.map((opt, i) => {
-                  const selected = getValues("answer") === opt;
+                  const selected = stepSelectedOptions[step]?.includes(opt) ?? false;
                   return (
                     <button
                       key={i}
-                      onClick={() => setValue("answer", selected ? "" : opt, { shouldValidate: true })}
+                      onClick={() => {
+                        const current = stepSelectedOptions[step] ?? [];
+                        const next = selected
+                          ? current.filter((o) => o !== opt)
+                          : [...current, opt];
+                        const newStepOpts = [...stepSelectedOptions];
+                        newStepOpts[step] = next;
+                        setStepSelectedOptions(newStepOpts);
+                        setValue("answer", next.join(", "), { shouldValidate: true });
+                      }}
                       style={{
                         padding: "6px 14px",
                         borderRadius: 999,

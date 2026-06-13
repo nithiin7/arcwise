@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import { QueryProvider } from "@/providers/QueryProvider";
 import { Toaster } from "@/components/ui/Toaster";
 
@@ -62,7 +61,6 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col" style={{ backgroundColor: "var(--color-bg)" }}>
         <ThemeProvider>
           <QueryProvider>
-            <ThemeToggle />
             {children}
             <Toaster />
           </QueryProvider>

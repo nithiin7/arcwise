@@ -35,5 +35,8 @@ async def suggest_architecture(session: Session) -> dict:
                 lines.append(f"  Q: {qa.question}")
                 lines.append(f"  A: {qa.answer}")
     user_prompt = "\n".join(lines)
-    raw = await complete(system=SYSTEM_PROMPT, user=user_prompt, model=session.model, api_key=session.api_key, max_tokens=8192, json_mode=True)
+    raw = await complete(
+        system=SYSTEM_PROMPT, user=user_prompt, model=session.model,
+        api_key=session.api_key, max_tokens=8192, json_mode=True,
+    )
     return extract_json(raw)

@@ -19,7 +19,11 @@ class Scores(BaseModel):
     tradeoff_awareness: int
     overall: int
 
-    @field_validator("functional_coverage", "nfr_handling", "component_justification", "tradeoff_awareness", "overall", mode="before")
+    @field_validator(
+        "functional_coverage", "nfr_handling", "component_justification",
+        "tradeoff_awareness", "overall",
+        mode="before",
+    )
     @classmethod
     def coerce_score(cls, v: object) -> object:
         return _coerce_score(v)

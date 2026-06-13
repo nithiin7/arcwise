@@ -111,7 +111,6 @@ export interface ArchitectureCanvasProps {
   isLoading: boolean;
   scaleAssumption?: string;
   onEditCode?: () => void;
-  improvements?: Improvement[];
 }
 
 export interface ComponentJustificationsProps {

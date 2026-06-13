@@ -44,7 +44,9 @@ async def delete_session_by_id(session_id: str) -> None:
 
 @router.post("")
 async def create_session(body: CreateSessionRequest) -> dict:
-    questions_data = await generate_clarifications(body.problem, model=body.model, api_key=body.api_key)
+    questions_data = await generate_clarifications(
+        body.problem, model=body.model, api_key=body.api_key
+    )
     session = Session(
         problem=body.problem,
         model=body.model,

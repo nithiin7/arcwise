@@ -17,7 +17,9 @@ async def refine(
     current_mermaid = (
         session.architecture.final_mermaid or session.architecture.llm_suggested_mermaid
     )
-    result = await refine_architecture(current_mermaid, body.message, model=session.model, api_key=session.api_key)
+    result = await refine_architecture(
+        current_mermaid, body.message, model=session.model, api_key=session.api_key
+    )
     revision = Revision(
         user_message=body.message,
         updated_mermaid=result["updated_mermaid"],

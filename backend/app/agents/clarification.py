@@ -34,7 +34,8 @@ async def generate_clarifications(
 ) -> list[dict]:
     user_prompt = f"System design problem:\n{problem}"
     raw = await complete(
-        system=SYSTEM_PROMPT, user=user_prompt, model=model, api_key=api_key, max_tokens=8192, json_mode=True
+        system=SYSTEM_PROMPT, user=user_prompt, model=model,
+        api_key=api_key, max_tokens=8192, json_mode=True,
     )
     data = extract_json(raw)
     return _parse_questions(data)

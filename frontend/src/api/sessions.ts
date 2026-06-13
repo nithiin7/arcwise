@@ -1,4 +1,4 @@
-import { del, get, post } from "@/lib/api";
+import { del, get, patch, post } from "@/lib/api";
 import type { Session } from "@/types";
 
 export interface CreateSessionResponse {
@@ -14,6 +14,7 @@ export interface SessionSummary {
   model: string;
   status: "clarifying" | "designing" | "reviewing" | "complete";
   overall_score: number | null;
+  tags: string[];
   created_at: string;
 }
 
@@ -43,6 +44,13 @@ export function listSessions(): Promise<SessionSummary[]> {
 
 export function deleteSession(sessionId: string): Promise<void> {
   return del(`/sessions/${sessionId}`);
+}
+
+export function updateSessionTags(
+  sessionId: string,
+  tags: string[],
+): Promise<{ id: string; tags: string[] }> {
+  return patch(`/sessions/${sessionId}/tags`, { tags });
 }
 
 export function createShareLink(sessionId: string): Promise<{ share_token: string }> {

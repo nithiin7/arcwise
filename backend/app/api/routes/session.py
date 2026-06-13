@@ -1,12 +1,23 @@
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
 
 from app.agents.clarification import generate_clarifications
 from app.models.session import ClarificationQA, CreateSessionRequest, Session
-from app.services.session_store import delete_session, get_session, list_sessions, save_session
+from app.services.session_store import (
+    delete_session,
+    get_session,
+    list_sessions,
+    save_session,
+    update_session_tags,
+)
 
 router = APIRouter()
+
+
+class UpdateTagsRequest(BaseModel):
+    tags: list[str]
 
 
 @router.get("", include_in_schema=True)
@@ -19,10 +30,19 @@ async def get_sessions() -> list[dict[str, Any]]:
             "model": s.model,
             "status": s.status,
             "overall_score": s.review.scores.overall if s.review else None,
+            "tags": s.tags,
             "created_at": s.created_at.isoformat(),
         }
         for s in sessions
     ]
+
+
+@router.patch("/{session_id}/tags")
+async def patch_session_tags(session_id: str, body: UpdateTagsRequest) -> dict[str, Any]:
+    session = await update_session_tags(session_id, body.tags)
+    if session is None:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return {"id": session.id, "tags": session.tags}
 
 
 @router.get("/{session_id}")

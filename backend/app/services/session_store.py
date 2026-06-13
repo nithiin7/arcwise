@@ -32,6 +32,7 @@ def _record_to_session(record: SessionRecord) -> Session:
         architecture=architecture,
         status=record.status,  # type: ignore[arg-type]
         review=Review(**record.review) if record.review else None,
+        tags=list(record.tags or []),
         share_token=record.share_token,
         created_at=record.created_at,
     )
@@ -71,6 +72,7 @@ async def save_session(session: Session) -> None:
                     clarifications=[c.model_dump(mode="json") for c in session.clarifications],
                     architecture=_arch_to_json(session),
                     review=session.review.model_dump(mode="json") if session.review else None,
+                    tags=session.tags,
                     share_token=session.share_token,
                     created_at=session.created_at,
                 )
@@ -86,6 +88,7 @@ async def save_session(session: Session) -> None:
             existing.review = (
                 session.review.model_dump(mode="json") if session.review else None
             )
+            existing.tags = session.tags
             existing.share_token = session.share_token
         await db.commit()
 
@@ -113,3 +116,14 @@ async def list_sessions(limit: int = 50) -> list[Session]:
             select(SessionRecord).order_by(SessionRecord.created_at.desc()).limit(limit)
         )
         return [_record_to_session(r) for r in result.scalars()]
+
+
+async def update_session_tags(session_id: str, tags: list[str]) -> Session | None:
+    async with AsyncSessionLocal() as db:
+        record = await db.get(SessionRecord, session_id)
+        if record is None:
+            return None
+        record.tags = tags
+        await db.commit()
+        await db.refresh(record)
+        return _record_to_session(record)

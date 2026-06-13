@@ -18,6 +18,7 @@ import LogoMark from "@/components/icons/LogoMark";
 import Spinner from "@/components/icons/Spinner";
 import { EXAMPLES, MODEL_GROUPS } from "@/constants/dashboard";
 import * as api from "@/api";
+import { updateSessionTags } from "@/api/sessions";
 import { createSessionSchema, type CreateSessionForm } from "@/lib/schemas";
 import { useSessionStore } from "@/store/sessionStore";
 import { useSettingsStore } from "@/store/settingsStore";
@@ -33,6 +34,8 @@ export default function HomePage() {
   const model = useSettingsStore((s) => s.selectedModel);
   const setModel = useSettingsStore((s) => s.setSelectedModel);
   const [showAll, setShowAll] = useState(false);
+  const [search, setSearch] = useState("");
+  const [activeTagFilters, setActiveTagFilters] = useState<string[]>([]);
 
   const {
     register,
@@ -91,7 +94,32 @@ export default function HomePage() {
     onError: () => toast.error("Failed to delete session."),
   });
 
+  const tagsMutation = useMutation({
+    mutationFn: ({ id, tags }: { id: string; tags: string[] }) => updateSessionTags(id, tags),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["sessions"] }),
+    onError: () => toast.error("Failed to update tags."),
+  });
+
   const canSubmit = isProblemValid && !createMutation.isPending && !missingKey;
+
+  const allTags = Array.from(new Set(history.flatMap((s) => s.tags))).sort();
+
+  const filteredHistory = history.filter((s) => {
+    const matchesSearch =
+      search === "" || s.problem.toLowerCase().includes(search.toLowerCase());
+    const matchesTags =
+      activeTagFilters.length === 0 ||
+      activeTagFilters.every((t) => s.tags.includes(t));
+    return matchesSearch && matchesTags;
+  });
+
+  const isFiltering = search !== "" || activeTagFilters.length > 0;
+
+  function toggleTagFilter(tag: string) {
+    setActiveTagFilters((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
+    );
+  }
 
   function onFormSubmit(data: CreateSessionForm) {
     createMutation.mutate({ problem: data.problem, model, apiKey: storedKey || undefined });
@@ -330,30 +358,137 @@ export default function HomePage() {
             transition={{ delay: 0.5, duration: 0.4 }}
             style={{ width: "100%", marginTop: 44 }}
           >
-            <p
+            {/* Header row */}
+            <div
               style={{
-                fontSize: 11,
-                fontWeight: 500,
-                letterSpacing: "0.06em",
-                textTransform: "uppercase",
-                color: "var(--color-text-faint)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
                 marginBottom: 8,
               }}
             >
-              Recent designs
-            </p>
+              <p
+                style={{
+                  fontSize: 11,
+                  fontWeight: 500,
+                  letterSpacing: "0.06em",
+                  textTransform: "uppercase",
+                  color: "var(--color-text-faint)",
+                  margin: 0,
+                }}
+              >
+                Recent designs
+              </p>
+
+              {/* Search input */}
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setShowAll(true);
+                }}
+                placeholder="Search…"
+                style={{
+                  fontSize: 12,
+                  color: "var(--color-text)",
+                  background: "var(--color-surface)",
+                  border: "1px solid var(--color-border)",
+                  borderRadius: "var(--radius-sm)",
+                  padding: "4px 10px",
+                  outline: "none",
+                  width: 140,
+                  fontFamily: "inherit",
+                  transition: "border-color 0.15s",
+                }}
+                onFocus={(e) => {
+                  (e.currentTarget as HTMLInputElement).style.borderColor =
+                    "var(--color-primary)";
+                }}
+                onBlur={(e) => {
+                  (e.currentTarget as HTMLInputElement).style.borderColor =
+                    "var(--color-border)";
+                }}
+              />
+            </div>
+
+            {/* Tag filter pills */}
+            {allTags.length > 0 && (
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: 4,
+                  marginBottom: 8,
+                  alignItems: "center",
+                }}
+              >
+                {allTags.map((tag) => {
+                  const active = activeTagFilters.includes(tag);
+                  return (
+                    <button
+                      key={tag}
+                      onClick={() => toggleTagFilter(tag)}
+                      style={{
+                        fontSize: 11,
+                        padding: "2px 8px",
+                        borderRadius: 999,
+                        border: active
+                          ? "1px solid var(--color-primary)"
+                          : "1px solid var(--color-border)",
+                        background: active ? "rgba(99,102,241,0.12)" : "transparent",
+                        color: active ? "var(--color-primary)" : "var(--color-text-faint)",
+                        cursor: "pointer",
+                        fontFamily: "inherit",
+                        transition: "all 0.15s",
+                      }}
+                    >
+                      {tag}
+                    </button>
+                  );
+                })}
+                {activeTagFilters.length > 0 && (
+                  <button
+                    onClick={() => setActiveTagFilters([])}
+                    style={{
+                      fontSize: 11,
+                      padding: "2px 8px",
+                      borderRadius: 999,
+                      border: "none",
+                      background: "transparent",
+                      color: "var(--color-text-faint)",
+                      cursor: "pointer",
+                      fontFamily: "inherit",
+                    }}
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Session list */}
             <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-              {(showAll ? history : history.slice(0, HISTORY_PAGE_SIZE)).map((s) => (
+              {(isFiltering || showAll
+                ? filteredHistory
+                : filteredHistory.slice(0, HISTORY_PAGE_SIZE)
+              ).map((s) => (
                 <SessionCard
                   key={s.id}
                   session={s}
                   onDelete={(id) => deleteMutation.mutate(id)}
+                  onTagsChange={(id, tags) => tagsMutation.mutate({ id, tags })}
                   deleteDisabled={deleteMutation.isPending}
                 />
               ))}
+              {isFiltering && filteredHistory.length === 0 && (
+                <p style={{ fontSize: 13, color: "var(--color-text-faint)", textAlign: "center", padding: "16px 0" }}>
+                  No sessions match.
+                </p>
+              )}
             </div>
 
-            {history.length > HISTORY_PAGE_SIZE && (
+            {!isFiltering && filteredHistory.length > HISTORY_PAGE_SIZE && (
               <button
                 onClick={() => setShowAll((v) => !v)}
                 style={{
@@ -376,7 +511,9 @@ export default function HomePage() {
                   (e.currentTarget as HTMLButtonElement).style.color = "var(--color-text-faint)";
                 }}
               >
-                {showAll ? "Show less" : `Show ${history.length - HISTORY_PAGE_SIZE} more`}
+                {showAll
+                  ? "Show less"
+                  : `Show ${filteredHistory.length - HISTORY_PAGE_SIZE} more`}
               </button>
             )}
           </motion.div>

@@ -1,0 +1,13 @@
+{
+  "keywords": "Stripe payment processing gateway transactions billing subscriptions",
+  "description": "Payment processing platform handling transactions at global scale",
+  "patterns": [
+    "Idempotency keys to deduplicate retried payment requests",
+    "Two-phase commit across ledger and bank network calls",
+    "Event-driven state machine for payment lifecycle (created → processing → succeeded/failed)",
+    "PostgreSQL with append-only ledger for financial auditability",
+    "Kafka for async webhook delivery with exponential backoff retry",
+    "Rate limiting per API key via Redis token bucket",
+    "PCI-DSS compliant vault for card data tokenization"
+  ]
+}

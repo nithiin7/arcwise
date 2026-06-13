@@ -433,7 +433,7 @@ export default function LandingPage() {
               margin: "0 auto 32px",
             }}
           >
-            Pick any system — URL shortener, Twitter, Netflix — and the AI will walk you through the full architecture.
+            Pick any system — URL shortener, Twitter, Netflix, Stripe, Slack — and the AI will walk you through the full architecture.
           </p>
           <Link
             href="/dashboard"

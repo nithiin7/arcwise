@@ -4,6 +4,11 @@ export const EXAMPLES = [
   "Design Netflix",
   "Design Uber",
   "Design YouTube",
+  "Design Slack",
+  "Design Dropbox",
+  "Design Stripe",
+  "Design GitHub",
+  "Design Reddit",
 ];
 
 export const MODEL_GROUPS = [

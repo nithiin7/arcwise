@@ -1,0 +1,13 @@
+{
+  "keywords": "GitHub code hosting version control git repositories pull requests CI/CD",
+  "description": "Distributed code hosting platform with collaboration and CI/CD workflows",
+  "patterns": [
+    "Git object store on distributed filesystem (each repo is a namespace)",
+    "PostgreSQL for metadata: repos, PRs, issues, users",
+    "Elasticsearch for code search across repositories",
+    "Kafka for event fan-out: webhooks, notifications, CI triggers",
+    "Worker fleet for CI/CD job scheduling with priority queues",
+    "CDN for raw file content and archive downloads",
+    "Redis for caching hot repo metadata and permission checks"
+  ]
+}

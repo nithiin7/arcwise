@@ -2,66 +2,63 @@ import { Bone } from "@/components/Bone";
 
 export default function HomeLoading() {
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        minHeight: "100vh",
-        padding: "0 16px",
-        background: "var(--color-bg)",
-      }}
-    >
+    <div style={{ minHeight: "100vh", background: "var(--color-bg)" }}>
+      {/* Nav */}
       <div
         style={{
-          width: "100%",
-          maxWidth: 672,
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          height: 52,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "0 28px",
+          borderBottom: "1px solid var(--color-border)",
+          background: "var(--color-bg)",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <Bone w={18} h={18} radius="4px" />
+          <Bone w={64} h={12} />
+        </div>
+        <Bone w={82} h={30} radius="var(--radius-sm)" />
+      </div>
+
+      {/* Hero */}
+      <div
+        style={{
+          minHeight: "100vh",
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
+          justifyContent: "center",
+          padding: "100px 24px 80px",
         }}
       >
-        {/* Logo + name */}
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 32 }}>
-          <Bone w={18} h={18} radius="4px" />
-          <Bone w={70} h={12} />
-        </div>
+        {/* Badge */}
+        <Bone w={196} h={26} radius="999px" />
+        <div style={{ height: 28 }} />
 
         {/* Heading */}
-        <Bone w="65%" h={40} radius="var(--radius-md)" />
-        <div style={{ height: 8 }} />
-        <Bone w="45%" h={40} radius="var(--radius-md)" />
-        <div style={{ height: 16 }} />
+        <Bone w="52%" h={52} radius="var(--radius-md)" />
+        <div style={{ height: 10 }} />
+        <Bone w="38%" h={52} radius="var(--radius-md)" />
+        <div style={{ height: 20 }} />
 
-        {/* Subtitle */}
-        <Bone w="60%" h={14} />
-        <div style={{ height: 6 }} />
-        <Bone w="45%" h={14} />
-        <div style={{ height: 32 }} />
+        {/* Subtext */}
+        <Bone w="50%" h={14} />
+        <div style={{ height: 7 }} />
+        <Bone w="42%" h={14} />
+        <div style={{ height: 7 }} />
+        <Bone w="35%" h={14} />
+        <div style={{ height: 40 }} />
 
-        {/* Textarea card */}
-        <div
-          style={{
-            width: "100%",
-            background: "var(--color-surface)",
-            border: "1px solid var(--color-border)",
-            borderRadius: "var(--radius-lg)",
-            padding: "14px 14px 48px 14px",
-            display: "flex",
-            flexDirection: "column",
-            gap: 8,
-          }}
-        >
-          <Bone h={14} w="80%" />
-          <Bone h={14} w="55%" />
-        </div>
-
-        {/* Example pills */}
-        <div style={{ display: "flex", gap: 8, marginTop: 16, flexWrap: "wrap", justifyContent: "center" }}>
-          {[100, 130, 110, 80, 120].map((w, i) => (
-            <Bone key={i} w={w} h={32} radius="999px" />
-          ))}
+        {/* CTAs */}
+        <div style={{ display: "flex", gap: 12 }}>
+          <Bone w={148} h={44} radius="var(--radius-sm)" />
+          <Bone w={118} h={44} radius="var(--radius-sm)" />
         </div>
       </div>
     </div>

@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Behavioral guidelines to reduce common LLM coding mistakes. Merged with project-specific instructions for **Arcwise** — an AI-powered system design coach built with FastAPI (Python 3.12) + Next.js 16 (TypeScript).
+Behavioral guidelines to reduce common LLM coding mistakes. Merged with project-specific instructions for **Arcwise** — an AI-powered system design platform built with FastAPI (Python 3.12) + Next.js 16 (TypeScript).
 
 **Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
 

@@ -134,7 +134,7 @@ export default function LandingPage() {
                 display: "inline-block",
               }}
             />
-            AI-powered system design practice
+            AI-powered system design platform
           </div>
 
           <h1
@@ -433,7 +433,7 @@ export default function LandingPage() {
               margin: "0 auto 32px",
             }}
           >
-            Pick any system — URL shortener, Twitter, Netflix, Stripe, Slack — and the AI will walk you through the full architecture.
+            Pick any system — URL shortener, payment processor, video platform, real-time messaging — and get a complete architecture with expert analysis.
           </p>
           <Link
             href="/dashboard"

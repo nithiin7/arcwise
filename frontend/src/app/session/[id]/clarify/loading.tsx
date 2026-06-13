@@ -14,10 +14,10 @@ export default function ClarifyLoading() {
       }}
     >
       <div style={{ width: "100%", maxWidth: 560 }}>
-        {/* Step dots */}
+        {/* Step progress dots */}
         <div style={{ display: "flex", justifyContent: "center", gap: 6, marginBottom: 40 }}>
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <Bone key={i} w={i === 1 ? 24 : 8} h={8} radius="999px" />
+          {[28, 8, 8, 8, 8].map((w, i) => (
+            <Bone key={i} w={w} h={8} radius="999px" />
           ))}
         </div>
 
@@ -39,13 +39,13 @@ export default function ClarifyLoading() {
           {/* Question text */}
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             <Bone h={20} w="90%" radius="var(--radius-sm)" />
-            <Bone h={20} w="65%" radius="var(--radius-sm)" />
+            <Bone h={20} w="62%" radius="var(--radius-sm)" />
           </div>
 
-          {/* Textarea */}
-          <Bone h={96} radius="var(--radius-md)" />
+          {/* Answer area */}
+          <Bone h={100} radius="var(--radius-md)" />
 
-          {/* Buttons */}
+          {/* Back / Next buttons */}
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
             <Bone w={72} h={36} radius="var(--radius-sm)" />
             <Bone w={80} h={36} radius="var(--radius-sm)" />

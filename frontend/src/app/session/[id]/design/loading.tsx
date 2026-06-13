@@ -23,29 +23,36 @@ export default function DesignLoading() {
           flexShrink: 0,
         }}
       >
+        {/* Back arrow */}
         <Bone w={28} h={28} radius="var(--radius-sm)" />
-        <Bone w={160} h={14} />
+        {/* Session title */}
+        <Bone w={200} h={13} />
         <div style={{ flex: 1 }} />
-        <Bone w={100} h={32} radius="var(--radius-sm)" />
+        {/* History pill */}
+        <Bone w={80} h={26} radius="999px" />
+        {/* Share */}
+        <Bone w={72} h={30} radius="var(--radius-sm)" />
+        {/* Refine / Review tabs */}
+        <div style={{ display: "flex", gap: 4 }}>
+          <Bone w={64} h={30} radius="var(--radius-sm)" />
+          <Bone w={64} h={30} radius="var(--radius-sm)" />
+        </div>
       </div>
 
-      {/* Body: diagram + chat */}
+      {/* Body */}
       <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
         {/* Left: diagram canvas */}
         <div
           style={{
             flex: 1,
             padding: 16,
-            display: "flex",
-            flexDirection: "column",
-            gap: 12,
             borderRight: "1px solid var(--color-border)",
           }}
         >
           <Bone h="100%" radius="var(--radius-md)" />
         </div>
 
-        {/* Right: chat + input */}
+        {/* Right: chat sidebar */}
         <div
           style={{
             width: 320,
@@ -57,11 +64,20 @@ export default function DesignLoading() {
           }}
         >
           {/* Chat messages */}
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 10 }}>
-            {[85, 60, 90, 55, 70].map((w, i) => (
-              <div key={i} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                <Bone w={w} h={12} />
-                <Bone w={`${w - 15}%`} h={12} />
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 16 }}>
+            {[
+              { sender: 60, lines: ["80%", "60%"] },
+              { sender: 56, lines: ["65%"] },
+              { sender: 64, lines: ["75%", "55%", "48%"] },
+              { sender: 60, lines: ["70%", "52%"] },
+            ].map((msg, i) => (
+              <div key={i} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                <Bone w={msg.sender} h={10} />
+                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                  {msg.lines.map((lw, j) => (
+                    <Bone key={j} w={lw} h={12} />
+                  ))}
+                </div>
               </div>
             ))}
           </div>

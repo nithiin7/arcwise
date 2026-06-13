@@ -1,72 +1,38 @@
 "use client";
 
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { KeyboardEvent } from "react";
+import { KeyboardEvent, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
 import ModelSelect from "@/components/ModelSelect";
+import SessionCard from "@/components/SessionCard";
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
 import GearIcon from "@/components/icons/GearIcon";
 import LogoMark from "@/components/icons/LogoMark";
 import Spinner from "@/components/icons/Spinner";
 import { EXAMPLES, MODEL_GROUPS } from "@/constants/dashboard";
-import type { SessionSummary } from "@/api/sessions";
 import * as api from "@/api";
 import { createSessionSchema, type CreateSessionForm } from "@/lib/schemas";
 import { useSessionStore } from "@/store/sessionStore";
 import { useSettingsStore } from "@/store/settingsStore";
 import type { Session } from "@/types";
 
-function statusLabel(status: SessionSummary["status"]) {
-  switch (status) {
-    case "complete":
-      return "Complete";
-    case "reviewing":
-      return "Reviewing";
-    case "designing":
-      return "Designing";
-    default:
-      return "Clarifying";
-  }
-}
-
-function statusColor(status: SessionSummary["status"]) {
-  switch (status) {
-    case "complete":
-      return "var(--color-success, #22c55e)";
-    case "reviewing":
-      return "var(--color-primary)";
-    case "designing":
-      return "#f59e0b";
-    default:
-      return "var(--color-text-faint)";
-  }
-}
-
-function sessionHref(s: SessionSummary) {
-  switch (s.status) {
-    case "complete":
-    case "reviewing":
-      return `/session/${s.id}/design`;
-    case "designing":
-      return `/session/${s.id}/design`;
-    default:
-      return `/session/${s.id}/clarify`;
-  }
-}
+const HISTORY_PAGE_SIZE = 5;
 
 export default function HomePage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const setSession = useSessionStore((s) => s.setSession);
   const getKeyForModel = useSettingsStore((s) => s.getKeyForModel);
   const model = useSettingsStore((s) => s.selectedModel);
   const setModel = useSettingsStore((s) => s.setSelectedModel);
+  const [showAll, setShowAll] = useState(false);
 
   const {
     register,
@@ -117,6 +83,12 @@ export default function HomePage() {
     onError: (err) => {
       toast.error(err instanceof Error ? err.message : "Something went wrong.");
     },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.deleteSession(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["sessions"] }),
+    onError: () => toast.error("Failed to delete session."),
   });
 
   const canSubmit = isProblemValid && !createMutation.isPending && !missingKey;
@@ -371,89 +343,44 @@ export default function HomePage() {
               Recent designs
             </p>
             <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-              {history.map((s) => (
-                <Link
+              {(showAll ? history : history.slice(0, HISTORY_PAGE_SIZE)).map((s) => (
+                <SessionCard
                   key={s.id}
-                  href={sessionHref(s)}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,
-                    padding: "10px 14px",
-                    borderRadius: "var(--radius-sm)",
-                    border: "1px solid var(--color-border)",
-                    background: "var(--color-surface)",
-                    textDecoration: "none",
-                    transition: "border-color 0.15s",
-                  }}
-                  onMouseEnter={(e) =>
-                    ((e.currentTarget as HTMLAnchorElement).style.borderColor =
-                      "var(--color-primary)")
-                  }
-                  onMouseLeave={(e) =>
-                    ((e.currentTarget as HTMLAnchorElement).style.borderColor =
-                      "var(--color-border)")
-                  }
-                >
-                  {/* Status dot */}
-                  <span
-                    style={{
-                      width: 7,
-                      height: 7,
-                      borderRadius: "50%",
-                      background: statusColor(s.status),
-                      flexShrink: 0,
-                    }}
-                  />
-
-                  {/* Problem */}
-                  <span
-                    style={{
-                      flex: 1,
-                      fontSize: 13,
-                      color: "var(--color-text)",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {s.problem}
-                  </span>
-
-                  {/* Score badge */}
-                  {s.overall_score !== null && (
-                    <span
-                      style={{
-                        fontSize: 12,
-                        fontWeight: 600,
-                        color: "var(--color-primary)",
-                        flexShrink: 0,
-                      }}
-                    >
-                      {s.overall_score}/10
-                    </span>
-                  )}
-
-                  {/* Status label */}
-                  <span
-                    style={{
-                      fontSize: 11,
-                      color: statusColor(s.status),
-                      flexShrink: 0,
-                      minWidth: 60,
-                      textAlign: "right",
-                    }}
-                  >
-                    {statusLabel(s.status)}
-                  </span>
-
-                  {/* Date */}
-                  <span style={{ fontSize: 11, color: "var(--color-text-faint)", flexShrink: 0 }}>
-                    {new Date(s.created_at).toLocaleDateString()}
-                  </span>
-                </Link>
+                  session={s}
+                  onDelete={(id) => deleteMutation.mutate(id)}
+                  deleteDisabled={deleteMutation.isPending}
+                />
               ))}
             </div>
+
+            {history.length > HISTORY_PAGE_SIZE && (
+              <button
+                onClick={() => setShowAll((v) => !v)}
+                style={{
+                  marginTop: 8,
+                  width: "100%",
+                  padding: "8px",
+                  borderRadius: "var(--radius-sm)",
+                  border: "1px solid var(--color-border)",
+                  background: "transparent",
+                  color: "var(--color-text-faint)",
+                  fontSize: 12,
+                  cursor: "pointer",
+                  transition: "color 0.15s, border-color 0.15s",
+                  fontFamily: "inherit",
+                }}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLButtonElement).style.color = "var(--color-text-muted)";
+                  (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--color-primary)";
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLButtonElement).style.color = "var(--color-text-faint)";
+                  (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--color-border)";
+                }}
+              >
+                {showAll ? "Show less" : `Show ${history.length - HISTORY_PAGE_SIZE} more`}
+              </button>
+            )}
           </motion.div>
         )}
       </motion.div>

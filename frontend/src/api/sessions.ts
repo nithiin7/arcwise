@@ -1,4 +1,4 @@
-import { get, post } from "@/lib/api";
+import { del, get, post } from "@/lib/api";
 import type { Session } from "@/types";
 
 export interface CreateSessionResponse {
@@ -39,4 +39,8 @@ export function getSession(sessionId: string): Promise<Session> {
 
 export function listSessions(): Promise<SessionSummary[]> {
   return get("/sessions");
+}
+
+export function deleteSession(sessionId: string): Promise<void> {
+  return del(`/sessions/${sessionId}`);
 }

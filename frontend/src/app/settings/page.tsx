@@ -3,7 +3,10 @@
 import Link from "next/link";
 import { ProviderCard } from "@/components/settings/ProviderCard";
 import { PROVIDERS } from "@/constants/settings";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { AppearanceSetting } from "@/components/settings/AppearanceSetting";
+import { ModelSetting } from "@/components/settings/ModelSetting";
+import { DiagramSetting } from "@/components/settings/DiagramSetting";
+import { DataSetting } from "@/components/settings/DataSetting";
 
 export default function SettingsPage() {
   return (
@@ -31,9 +34,30 @@ export default function SettingsPage() {
           ← Back
         </Link>
         <h1 style={{ fontSize: 20, fontWeight: 700, color: "var(--color-text)" }}>Settings</h1>
-        <div style={{ marginLeft: "auto" }}>
-          <ThemeToggle inline />
-        </div>
+      </div>
+
+      {/* Appearance section */}
+      <div style={{ marginBottom: 32 }}>
+        <h2 style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-muted)", letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: 16 }}>
+          Appearance
+        </h2>
+        <AppearanceSetting />
+      </div>
+
+      {/* Model section */}
+      <div style={{ marginBottom: 32 }}>
+        <h2 style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-muted)", letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: 16 }}>
+          Model
+        </h2>
+        <ModelSetting />
+      </div>
+
+      {/* Diagram section */}
+      <div style={{ marginBottom: 32 }}>
+        <h2 style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-muted)", letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: 16 }}>
+          Diagram
+        </h2>
+        <DiagramSetting />
       </div>
 
       {/* API Keys section */}
@@ -49,6 +73,14 @@ export default function SettingsPage() {
             <ProviderCard key={p.field} provider={p} />
           ))}
         </div>
+      </div>
+
+      {/* Data section */}
+      <div style={{ marginBottom: 32 }}>
+        <h2 style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-muted)", letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: 16 }}>
+          Data
+        </h2>
+        <DataSetting />
       </div>
 
       {/* Ollama section */}

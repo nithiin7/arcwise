@@ -17,11 +17,13 @@ interface SettingsState extends ProviderKeys {
   theme: Theme;
   resolvedTheme: "light" | "dark";
   selectedModel: string;
+  diagramDirection: "LR" | "TD";
   setKey: (field: keyof ProviderKeys, value: string) => void;
   getKeyForModel: (model: string) => string;
   setTheme: (theme: Theme) => void;
   setResolvedTheme: (theme: "light" | "dark") => void;
   setSelectedModel: (model: string) => void;
+  setDiagramDirection: (direction: "LR" | "TD") => void;
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -35,11 +37,13 @@ export const useSettingsStore = create<SettingsState>()(
       theme: "system",
       resolvedTheme: "light",
       selectedModel: "claude-sonnet-4-6",
+      diagramDirection: "LR",
 
       setKey: (field, value) => set({ [field]: value }),
       setTheme: (theme) => set({ theme }),
       setResolvedTheme: (resolvedTheme) => set({ resolvedTheme }),
       setSelectedModel: (model) => set({ selectedModel: model }),
+      setDiagramDirection: (diagramDirection) => set({ diagramDirection }),
 
       getKeyForModel: (model) => {
         const s = get();
@@ -70,6 +74,7 @@ export const useSettingsStore = create<SettingsState>()(
         groqKey: s.groqKey,
         theme: s.theme,
         selectedModel: s.selectedModel,
+        diagramDirection: s.diagramDirection,
       }),
     }
   )

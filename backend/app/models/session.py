@@ -77,6 +77,10 @@ class RefineArchitectureRequest(BaseModel):
     message: str
 
 
+class SuggestArchitectureRequest(BaseModel):
+    diagram_direction: str = "LR"
+
+
 class SubmitArchitectureRequest(BaseModel):
     user_description: str | None = None
 

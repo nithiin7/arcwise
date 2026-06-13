@@ -3,7 +3,7 @@ from typing import Any
 from app.models.session import Session
 from app.services.llm import LLMUsage, complete, extract_json
 
-SYSTEM_PROMPT = """You are a principal engineer tasked with producing a recommended system architecture.
+SYSTEM_PROMPT_TEMPLATE = """You are a principal engineer tasked with producing a recommended system architecture.
 
 SCALE GUIDANCE — choose components appropriate for the assumed or stated scale:
 - <100K DAU: simple monolith, basic caching (Redis), single primary DB.
@@ -11,25 +11,27 @@ SCALE GUIDANCE — choose components appropriate for the assumed or stated scale
 - >10M DAU: full horizontal sharding, CDN everywhere, distributed caching, event sourcing, CQRS.
 
 MERMAID RULES — the diagram MUST follow these rules exactly:
-- Direction: flowchart LR
+- Direction: flowchart {direction}
 - Include ALL major components: clients, load balancer, API gateway, services, databases, caches, queues, CDNs.
 - Use descriptive node names with labels, e.g. LB[Load Balancer], API[API Gateway], Cache[Redis Cache].
 - Add edge labels that describe data flow, e.g. LB -->|routes| API.
 - Group related components inside subgraph blocks with clear titles.
 
 Return ONLY valid JSON — no prose, no markdown fences:
-{
+{{
   "explanation": "<3-4 paragraphs describing the architecture>",
-  "mermaid_dsl": "flowchart LR\\n...",
-  "component_justifications": { "ComponentName": "reason for inclusion" },
+  "mermaid_dsl": "flowchart {direction}\\n...",
+  "component_justifications": {{ "ComponentName": "reason for inclusion" }},
   "scale_assumption": "<'Assumed X DAU based on problem context' or 'Based on user input: X'>",
   "tags": ["<tag1>", "<tag2>"]
-}
+}}
 
 For "tags": exactly 1-2 short lowercase labels (e.g. "url-shortener", "high-scale", "real-time", "microservices", "caching", "streaming"). These categorize the system type and key architectural property."""
 
 
-async def suggest_architecture(session: Session) -> tuple[dict[str, Any], LLMUsage]:
+async def suggest_architecture(session: Session, diagram_direction: str = "LR") -> tuple[dict[str, Any], LLMUsage]:
+    direction = diagram_direction if diagram_direction in ("LR", "TD") else "LR"
+    system_prompt = SYSTEM_PROMPT_TEMPLATE.format(direction=direction)
     lines: list[str] = [f"Problem: {session.problem}"]
     if session.user_scale:
         lines.append(f"User-stated scale: {session.user_scale}")
@@ -41,7 +43,7 @@ async def suggest_architecture(session: Session) -> tuple[dict[str, Any], LLMUsa
                 lines.append(f"  A: {qa.answer}")
     user_prompt = "\n".join(lines)
     raw, usage = await complete(
-        system=SYSTEM_PROMPT, user=user_prompt, model=session.model,
+        system=system_prompt, user=user_prompt, model=session.model,
         api_key=session.api_key, max_tokens=8192, json_mode=True,
     )
     return extract_json(raw), usage

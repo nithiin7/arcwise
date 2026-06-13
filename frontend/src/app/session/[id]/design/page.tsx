@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import * as api from "@/api";
 import { chatMessageSchema, type ChatMessageForm } from "@/lib/schemas";
 import { useSessionStore } from "@/store/sessionStore";
+import { useSettingsStore } from "@/store/settingsStore";
 import { scoreColor } from "@/lib/utils";
 import type { Revision } from "@/types";
 import { ArchitectureCanvas } from "@/components/design/ArchitectureCanvas";
@@ -41,6 +42,7 @@ export default function DesignPage() {
   const setSession = useSessionStore((s) => s.setSession);
   const setReview = useSessionStore((s) => s.setReview);
   const reset = useSessionStore((s) => s.reset);
+  const diagramDirection = useSettingsStore((s) => s.diagramDirection);
 
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
@@ -94,7 +96,7 @@ export default function DesignPage() {
   }, []);
 
   const suggestMutation = useMutation({
-    mutationFn: () => api.suggestArchitecture(sessionId),
+    mutationFn: () => api.suggestArchitecture(sessionId, diagramDirection),
     onSuccess: (result) => {
       setSession({
         ...session!,

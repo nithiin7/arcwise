@@ -4,7 +4,13 @@ from fastapi import APIRouter, Depends
 
 from app.agents.suggester import suggest_architecture
 from app.api.deps import get_session_or_404
-from app.models.session import Session, SubmitArchitectureRequest, TokenUsage, UpdateMermaidRequest
+from app.models.session import (
+    Session,
+    SubmitArchitectureRequest,
+    SuggestArchitectureRequest,
+    TokenUsage,
+    UpdateMermaidRequest,
+)
 from app.services.session_store import save_session
 
 router = APIRouter()
@@ -13,9 +19,10 @@ router = APIRouter()
 @router.post("/{session_id}/architecture/suggest")
 async def architecture_suggest(
     session_id: str,
+    body: SuggestArchitectureRequest = SuggestArchitectureRequest(),
     session: Session = Depends(get_session_or_404),
 ) -> dict[str, Any]:
-    result, usage = await suggest_architecture(session)
+    result, usage = await suggest_architecture(session, body.diagram_direction)
     session.architecture.llm_suggested_mermaid = result.get("mermaid_dsl", "")
     session.architecture.llm_explanation = result.get("explanation", "")
     session.architecture.component_justifications = result.get("component_justifications", {})

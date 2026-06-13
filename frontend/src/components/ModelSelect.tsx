@@ -28,7 +28,7 @@ function resolveSize(groups: ModelGroup[], value: string): string | undefined {
   }
 }
 
-export default function ModelSelect({ groups: baseGroups, value, onChange }: ModelSelectProps) {
+export default function ModelSelect({ groups: baseGroups, value, onChange, direction = "up" }: ModelSelectProps) {
   const [open, setOpen] = useState(false);
   const [focused, setFocused] = useState<string>(value);
   const [ollamaModels, setOllamaModels] = useState<OllamaModel[] | null>(null);
@@ -190,7 +190,7 @@ export default function ModelSelect({ groups: baseGroups, value, onChange }: Mod
           role="listbox"
           style={{
             position: "absolute",
-            bottom: "calc(100% + 6px)",
+            ...(direction === "down" ? { top: "calc(100% + 6px)" } : { bottom: "calc(100% + 6px)" }),
             left: 0,
             minWidth: 200,
             maxHeight: 280,

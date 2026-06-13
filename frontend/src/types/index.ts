@@ -104,6 +104,7 @@ export interface ModelSelectProps {
   groups: ModelGroup[];
   value: string;
   onChange: (value: string) => void;
+  direction?: "up" | "down";
 }
 
 export interface ErrorViewProps {

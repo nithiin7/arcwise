@@ -17,8 +17,8 @@ export interface RevertRevisionResponse {
   mermaid: string;
 }
 
-export function suggestArchitecture(sessionId: string): Promise<SuggestArchitectureResponse> {
-  return post(`/sessions/${sessionId}/architecture/suggest`);
+export function suggestArchitecture(sessionId: string, diagramDirection?: string): Promise<SuggestArchitectureResponse> {
+  return post(`/sessions/${sessionId}/architecture/suggest`, diagramDirection ? { diagram_direction: diagramDirection } : undefined);
 }
 
 export function refineArchitecture(

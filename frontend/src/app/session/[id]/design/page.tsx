@@ -381,6 +381,7 @@ export default function DesignPage() {
                       mermaid={displayedMermaid}
                       isLoading={false}
                       scaleAssumption={arch.scale_assumption}
+                      improvements={review?.improvements}
                     />
                   </div>
                 </div>
@@ -405,6 +406,7 @@ export default function DesignPage() {
                       isLoading={suggestMutation.isPending}
                       scaleAssumption={arch.scale_assumption}
                       onEditCode={() => setCodeEditorOpen(true)}
+                      improvements={review?.improvements}
                     />
                   </div>
                 </div>
@@ -415,6 +417,7 @@ export default function DesignPage() {
                 isLoading={suggestMutation.isPending}
                 scaleAssumption={arch.scale_assumption}
                 onEditCode={() => setCodeEditorOpen(true)}
+                improvements={review?.improvements}
               />
             )}
           </div>

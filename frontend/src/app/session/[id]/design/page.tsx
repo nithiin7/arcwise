@@ -15,14 +15,13 @@ import { useSessionStore } from "@/store/sessionStore";
 import { scoreColor } from "@/lib/utils";
 import type { Revision } from "@/types";
 import { ArchitectureCanvas } from "@/components/design/ArchitectureCanvas";
-import { ComponentJustifications } from "@/components/design/ComponentJustifications";
-import { RevisionTimeline } from "@/components/design/RevisionTimeline";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import BackArrow from "@/components/icons/BackArrow";
 import SendIcon from "@/components/icons/SendIcon";
 import Spinner from "@/components/icons/Spinner";
+import ChevronDown from "@/components/icons/ChevronDown";
 import { SCORE_KEYS, PRIORITY_COLORS } from "@/constants/review";
 
 type Tab = "refine" | "review";
@@ -46,6 +45,7 @@ export default function DesignPage() {
     const { review, session: s } = useSessionStore.getState();
     return review || s?.review ? "review" : "refine";
   });
+  const [justificationsOpen, setJustificationsOpen] = useState(false);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputFocusRef = useRef<HTMLInputElement | null>(null);
@@ -214,6 +214,9 @@ export default function DesignPage() {
 
   const hasReview = review !== null;
   const isReviewing = submitMutation.isPending || reviewMutation.isPending;
+  const overallScore = review?.scores?.overall;
+  const justificationEntries = Object.entries(arch.component_justifications);
+  const showHistoryStrip = arch.revisions.length > 0 || !!arch.llm_suggested_mermaid;
 
   return (
     <div
@@ -228,7 +231,7 @@ export default function DesignPage() {
       {/* Header */}
       <header
         style={{
-          height: 48,
+          height: 52,
           display: "flex",
           alignItems: "center",
           gap: 12,
@@ -259,6 +262,29 @@ export default function DesignPage() {
           {session.problem}
         </span>
 
+        {overallScore !== undefined && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "baseline",
+              gap: 3,
+              background: "var(--color-surface)",
+              border: "1px solid var(--color-border)",
+              borderRadius: "var(--radius-md)",
+              padding: "4px 12px",
+              flexShrink: 0,
+            }}
+          >
+            <span style={{ fontSize: 11, color: "var(--color-text-faint)", fontWeight: 500, marginRight: 2 }}>
+              Score
+            </span>
+            <span className={scoreColor(overallScore)} style={{ fontSize: 16, fontWeight: 700, lineHeight: 1 }}>
+              {overallScore}
+            </span>
+            <span style={{ fontSize: 10, color: "var(--color-text-faint)" }}>/10</span>
+          </div>
+        )}
+
         {!hasReview && (
           <Button
             onClick={() => submitMutation.mutate()}
@@ -278,98 +304,198 @@ export default function DesignPage() {
 
       {/* Body */}
       <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
-        {/* Diagram area */}
-        <div style={{ flex: 1, overflow: "hidden", display: "flex" }}>
-          {previewIndex !== null ? (
-            <>
-              {/* Left: historical revision */}
-              <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column", borderRight: "1px solid var(--color-border)" }}>
+        {/* Left: diagram area + history strip */}
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+          {/* Diagram canvas */}
+          <div style={{ flex: 1, overflow: "hidden", display: "flex" }}>
+            {previewIndex !== null ? (
+              <>
+                {/* Historical revision */}
                 <div
                   style={{
-                    height: 32,
+                    flex: 1,
+                    overflow: "hidden",
                     display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    padding: "0 12px",
-                    borderBottom: "1px solid var(--color-border)",
-                    background: "var(--color-surface)",
-                    flexShrink: 0,
-                    gap: 8,
+                    flexDirection: "column",
+                    borderRight: "1px solid var(--color-border)",
                   }}
                 >
-                  <span
+                  <div
                     style={{
-                      fontSize: 12,
-                      color: "var(--color-text-muted)",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {previewLabel}
-                  </span>
-                  <button
-                    onClick={() => setPreviewIndex(null)}
-                    style={{
-                      background: "transparent",
-                      border: "none",
-                      cursor: "pointer",
-                      color: "var(--color-text-faint)",
-                      fontSize: 16,
-                      lineHeight: 1,
-                      padding: "0 2px",
+                      height: 32,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      padding: "0 12px",
+                      borderBottom: "1px solid var(--color-border)",
+                      background: "var(--color-surface)",
                       flexShrink: 0,
-                      fontFamily: "inherit",
+                      gap: 8,
                     }}
                   >
-                    ×
-                  </button>
+                    <span
+                      style={{
+                        fontSize: 12,
+                        color: "var(--color-text-muted)",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {previewLabel}
+                    </span>
+                    <button
+                      onClick={() => setPreviewIndex(null)}
+                      style={{
+                        background: "transparent",
+                        border: "none",
+                        cursor: "pointer",
+                        color: "var(--color-text-faint)",
+                        fontSize: 16,
+                        lineHeight: 1,
+                        padding: "0 2px",
+                        flexShrink: 0,
+                        fontFamily: "inherit",
+                      }}
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <div style={{ flex: 1, overflow: "hidden" }}>
+                    <ArchitectureCanvas
+                      mermaid={displayedMermaid}
+                      isLoading={false}
+                      scaleAssumption={arch.scale_assumption}
+                    />
+                  </div>
                 </div>
-                <div style={{ flex: 1, overflow: "hidden" }}>
-                  <ArchitectureCanvas
-                    mermaid={displayedMermaid}
-                    isLoading={false}
-                    scaleAssumption={arch.scale_assumption}
+                {/* Current state */}
+                <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+                  <div
+                    style={{
+                      height: 32,
+                      display: "flex",
+                      alignItems: "center",
+                      padding: "0 12px",
+                      borderBottom: "1px solid var(--color-border)",
+                      background: "var(--color-surface)",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <span style={{ fontSize: 12, color: "var(--color-text-muted)" }}>Current</span>
+                  </div>
+                  <div style={{ flex: 1, overflow: "hidden" }}>
+                    <ArchitectureCanvas
+                      mermaid={currentMermaid}
+                      isLoading={suggestMutation.isPending}
+                      scaleAssumption={arch.scale_assumption}
+                    />
+                  </div>
+                </div>
+              </>
+            ) : (
+              <ArchitectureCanvas
+                mermaid={currentMermaid}
+                isLoading={suggestMutation.isPending}
+                scaleAssumption={arch.scale_assumption}
+              />
+            )}
+          </div>
+
+          {/* History strip */}
+          {showHistoryStrip && (
+            <div
+              style={{
+                height: 44,
+                borderTop: "1px solid var(--color-border)",
+                background: "var(--color-surface)",
+                display: "flex",
+                alignItems: "center",
+                gap: 0,
+                padding: "0 12px",
+                overflowX: "auto",
+                flexShrink: 0,
+              }}
+            >
+              <span
+                style={{
+                  fontSize: 10,
+                  fontWeight: 600,
+                  color: "var(--color-text-faint)",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.07em",
+                  marginRight: 10,
+                  flexShrink: 0,
+                }}
+              >
+                History
+              </span>
+
+              {arch.llm_suggested_mermaid && (
+                <>
+                  <HistoryPill
+                    label="Initial"
+                    isViewing={previewIndex === -1}
+                    canRevert={false}
+                    onView={() => handleView(-1)}
+                    onRevert={() => {}}
                   />
-                </div>
-              </div>
-              {/* Right: current state */}
-              <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
-                <div
-                  style={{
-                    height: 32,
-                    display: "flex",
-                    alignItems: "center",
-                    padding: "0 12px",
-                    borderBottom: "1px solid var(--color-border)",
-                    background: "var(--color-surface)",
-                    flexShrink: 0,
-                  }}
-                >
-                  <span style={{ fontSize: 12, color: "var(--color-text-muted)" }}>Current</span>
-                </div>
-                <div style={{ flex: 1, overflow: "hidden" }}>
-                  <ArchitectureCanvas
-                    mermaid={currentMermaid}
-                    isLoading={suggestMutation.isPending}
-                    scaleAssumption={arch.scale_assumption}
+                  {arch.revisions.length > 0 && <HistoryArrow />}
+                </>
+              )}
+
+              {arch.revisions.map((rev, i) => (
+                <span key={i} style={{ display: "contents" }}>
+                  <HistoryPill
+                    label={rev.diff_summary}
+                    isViewing={previewIndex === i}
+                    canRevert={true}
+                    onView={() => handleView(i)}
+                    onRevert={() => revertMutation.mutate(i)}
                   />
-                </div>
-              </div>
-            </>
-          ) : (
-            <ArchitectureCanvas
-              mermaid={currentMermaid}
-              isLoading={suggestMutation.isPending}
-              scaleAssumption={arch.scale_assumption}
-            />
+                  {i < arch.revisions.length - 1 && <HistoryArrow />}
+                </span>
+              ))}
+
+              {/* Current marker */}
+              {(arch.llm_suggested_mermaid || arch.revisions.length > 0) && (
+                <>
+                  <HistoryArrow />
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 5,
+                      padding: "3px 10px",
+                      borderRadius: 999,
+                      background: "rgba(99,102,241,0.1)",
+                      border: "1px solid rgba(99,102,241,0.3)",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: 5,
+                        height: 5,
+                        borderRadius: "50%",
+                        background: "var(--color-primary)",
+                        flexShrink: 0,
+                      }}
+                    />
+                    <span style={{ fontSize: 11, fontWeight: 600, color: "var(--color-primary)" }}>
+                      Current
+                    </span>
+                  </div>
+                </>
+              )}
+            </div>
           )}
         </div>
 
         {/* Right panel */}
         <div
           style={{
-            width: 340,
+            width: 400,
             borderLeft: "1px solid var(--color-border)",
             display: "flex",
             flexDirection: "column",
@@ -377,7 +503,7 @@ export default function DesignPage() {
             flexShrink: 0,
           }}
         >
-          {/* Tab bar — only show when review exists or is being generated */}
+          {/* Tab bar — only when review exists or is generating */}
           {(hasReview || isReviewing) && (
             <div
               style={{
@@ -392,7 +518,7 @@ export default function DesignPage() {
                   onClick={() => setActiveTab(tab)}
                   style={{
                     flex: 1,
-                    padding: "10px 0",
+                    padding: "11px 0",
                     fontSize: 13,
                     fontWeight: 500,
                     fontFamily: "inherit",
@@ -404,10 +530,9 @@ export default function DesignPage() {
                     color: activeTab === tab ? "var(--color-text)" : "var(--color-text-faint)",
                     cursor: "pointer",
                     transition: "color 0.15s",
-                    textTransform: "capitalize",
                   }}
                 >
-                  {tab}
+                  {tab === "refine" ? "Refine" : "Review"}
                 </button>
               ))}
             </div>
@@ -416,6 +541,7 @@ export default function DesignPage() {
           {/* Refine tab */}
           {activeTab === "refine" && (
             <>
+              {/* Scale assumption */}
               {arch.scale_assumption && (
                 <div
                   style={{
@@ -423,12 +549,12 @@ export default function DesignPage() {
                     background: "rgba(245,158,11,0.08)",
                     borderBottom: "1px solid rgba(245,158,11,0.2)",
                     display: "flex",
-                    alignItems: "center",
+                    alignItems: "flex-start",
                     gap: 8,
                     flexShrink: 0,
                   }}
                 >
-                  <span style={{ fontSize: 14 }}>⚡</span>
+                  <span style={{ fontSize: 14, flexShrink: 0, marginTop: 1 }}>⚡</span>
                   <span
                     style={{
                       fontSize: 12,
@@ -442,24 +568,15 @@ export default function DesignPage() {
                 </div>
               )}
 
-              <div
-                style={{
-                  flex: 1,
-                  overflowY: "auto",
-                  padding: "12px 12px 8px",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 8,
-                }}
-              >
-                {arch.llm_explanation && (
-                  <div
-                    style={{
-                      background: "var(--color-surface)",
-                      borderRadius: "var(--radius-md)",
-                      padding: "10px 12px",
-                    }}
-                  >
+              {/* AI explanation + component justifications */}
+              {arch.llm_explanation && (
+                <div
+                  style={{
+                    borderBottom: "1px solid var(--color-border)",
+                    flexShrink: 0,
+                  }}
+                >
+                  <div style={{ padding: "12px 16px 10px" }}>
                     <p
                       style={{
                         fontSize: 13,
@@ -470,6 +587,133 @@ export default function DesignPage() {
                     >
                       {arch.llm_explanation}
                     </p>
+                  </div>
+
+                  {justificationEntries.length > 0 && (
+                    <>
+                      <button
+                        onClick={() => setJustificationsOpen((o) => !o)}
+                        style={{
+                          width: "100%",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          padding: "4px 16px 10px",
+                          background: "transparent",
+                          border: "none",
+                          cursor: "pointer",
+                          fontFamily: "inherit",
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontSize: 12,
+                            fontWeight: 500,
+                            color: "var(--color-text-faint)",
+                          }}
+                        >
+                          Component reasoning ({justificationEntries.length})
+                        </span>
+                        <motion.span
+                          animate={{ rotate: justificationsOpen ? 180 : 0 }}
+                          transition={{ duration: 0.2 }}
+                          style={{ display: "flex", color: "var(--color-text-faint)" }}
+                        >
+                          <ChevronDown />
+                        </motion.span>
+                      </button>
+
+                      <AnimatePresence>
+                        {justificationsOpen && (
+                          <motion.div
+                            initial={{ height: 0 }}
+                            animate={{ height: "auto" }}
+                            exit={{ height: 0 }}
+                            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                            style={{ overflow: "hidden" }}
+                          >
+                            <div
+                              style={{
+                                padding: "0 12px 12px",
+                                display: "flex",
+                                flexDirection: "column",
+                                gap: 6,
+                                maxHeight: 240,
+                                overflowY: "auto",
+                              }}
+                            >
+                              {justificationEntries.map(([name, reason]) => (
+                                <div
+                                  key={name}
+                                  style={{
+                                    padding: "9px 12px",
+                                    background: "var(--color-surface)",
+                                    borderRadius: "var(--radius-md)",
+                                    borderLeft: "3px solid rgba(99,102,241,0.5)",
+                                  }}
+                                >
+                                  <span
+                                    style={{
+                                      display: "inline-block",
+                                      fontSize: 11,
+                                      fontWeight: 700,
+                                      color: "rgba(99,102,241,0.9)",
+                                      background: "rgba(99,102,241,0.1)",
+                                      border: "1px solid rgba(99,102,241,0.2)",
+                                      borderRadius: 4,
+                                      padding: "1px 7px",
+                                      marginBottom: 5,
+                                      letterSpacing: "0.01em",
+                                    }}
+                                  >
+                                    {name}
+                                  </span>
+                                  <p
+                                    style={{
+                                      fontSize: 12,
+                                      color: "var(--color-text-muted)",
+                                      lineHeight: 1.55,
+                                      margin: 0,
+                                    }}
+                                  >
+                                    {reason as string}
+                                  </p>
+                                </div>
+                              ))}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* Chat messages */}
+              <div
+                style={{
+                  flex: 1,
+                  overflowY: "auto",
+                  padding: "12px 12px 8px",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 8,
+                }}
+              >
+                {chatMessages.length === 0 && (
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      height: "100%",
+                      color: "var(--color-text-faint)",
+                      fontSize: 13,
+                      textAlign: "center",
+                      padding: "0 16px",
+                    }}
+                  >
+                    Ask me to refine the architecture…
                   </div>
                 )}
 
@@ -529,20 +773,7 @@ export default function DesignPage() {
                 <div ref={chatEndRef} />
               </div>
 
-              {Object.keys(arch.component_justifications).length > 0 && (
-                <ComponentJustifications justifications={arch.component_justifications} />
-              )}
-
-              {arch.revisions.length > 0 && (
-                <RevisionTimeline
-                  revisions={arch.revisions}
-                  onRevert={(index) => revertMutation.mutate(index)}
-                  onView={handleView}
-                  viewingIndex={previewIndex}
-                  initialMermaid={arch.llm_suggested_mermaid}
-                />
-              )}
-
+              {/* Chat input */}
               <div
                 style={{
                   borderTop: "1px solid var(--color-border)",
@@ -579,7 +810,7 @@ export default function DesignPage() {
 
           {/* Review tab */}
           {activeTab === "review" && (
-            <div style={{ flex: 1, overflowY: "auto", padding: "12px" }}>
+            <div style={{ flex: 1, overflowY: "auto", padding: "16px" }}>
               {isReviewing && !review ? (
                 <div
                   style={{
@@ -606,64 +837,196 @@ export default function DesignPage() {
   );
 }
 
+function HistoryArrow() {
+  return (
+    <span
+      style={{
+        fontSize: 12,
+        color: "var(--color-text-faint)",
+        padding: "0 4px",
+        flexShrink: 0,
+        userSelect: "none",
+      }}
+    >
+      →
+    </span>
+  );
+}
+
+function HistoryPill({
+  label,
+  isViewing,
+  canRevert,
+  onView,
+  onRevert,
+}: {
+  label: string;
+  isViewing: boolean;
+  canRevert: boolean;
+  onView: () => void;
+  onRevert: () => void;
+}) {
+  const [hovered, setHovered] = useState(false);
+
+  return (
+    <div
+      style={{ display: "flex", alignItems: "stretch", flexShrink: 0 }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      <button
+        onClick={onView}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 5,
+          padding: "3px 10px",
+          borderRadius: canRevert && hovered ? "999px 0 0 999px" : 999,
+          background: isViewing ? "rgba(99,102,241,0.12)" : "var(--color-bg)",
+          border: `1px solid ${isViewing ? "rgba(99,102,241,0.4)" : "var(--color-border)"}`,
+          borderRight: canRevert && hovered ? "none" : undefined,
+          cursor: "pointer",
+          fontFamily: "inherit",
+          maxWidth: 160,
+          transition: "background 0.1s, border-color 0.1s",
+        }}
+      >
+        <div
+          style={{
+            width: 5,
+            height: 5,
+            borderRadius: "50%",
+            background: isViewing ? "var(--color-primary)" : "var(--color-text-faint)",
+            flexShrink: 0,
+            transition: "background 0.1s",
+          }}
+        />
+        <span
+          style={{
+            fontSize: 11,
+            fontWeight: isViewing ? 600 : 400,
+            color: isViewing ? "var(--color-primary)" : "var(--color-text-muted)",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            transition: "color 0.1s",
+          }}
+        >
+          {label}
+        </span>
+      </button>
+
+      {canRevert && hovered && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onRevert();
+          }}
+          title="Revert to this version"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            padding: "3px 8px",
+            borderRadius: "0 999px 999px 0",
+            background: "var(--color-bg)",
+            border: "1px solid var(--color-border)",
+            borderLeft: "none",
+            cursor: "pointer",
+            fontFamily: "inherit",
+            fontSize: 11,
+            color: "var(--color-text-faint)",
+          }}
+        >
+          ↩
+        </button>
+      )}
+    </div>
+  );
+}
+
 function ReviewPanel({ review }: { review: NonNullable<ReturnType<typeof useSessionStore.getState>["review"]> }) {
   const { scores, feedback, strengths, gaps, improvements, reference_architecture_note } = review;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       {/* Score grid */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6 }}>
-        {SCORE_KEYS.map(({ key, label }) => {
-          const score = scores[key];
-          const isOverall = key === "overall";
-          return (
-            <div
-              key={key}
-              style={{
-                background: isOverall ? "rgba(99,102,241,0.07)" : "var(--color-surface)",
-                border: isOverall ? "1px solid rgba(99,102,241,0.3)" : "1px solid var(--color-border)",
-                borderRadius: "var(--radius-md)",
-                padding: "10px 8px",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                gap: 4,
-                gridColumn: isOverall ? "span 3" : undefined,
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "baseline", gap: 2 }}>
-                <span
-                  className={scoreColor(score)}
-                  style={{ fontSize: isOverall ? 32 : 22, fontWeight: 700, lineHeight: 1 }}
-                >
-                  {score}
-                </span>
-                <span style={{ fontSize: 11, color: "var(--color-text-faint)" }}>/10</span>
-              </div>
-              <span
+      <div>
+        <p
+          style={{
+            fontSize: 10,
+            fontWeight: 600,
+            color: "var(--color-text-faint)",
+            textTransform: "uppercase",
+            letterSpacing: "0.08em",
+            marginBottom: 8,
+          }}
+        >
+          Scores
+        </p>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 6 }}>
+          {SCORE_KEYS.map(({ key, label }) => {
+            const score = scores[key];
+            const isOverall = key === "overall";
+            return (
+              <div
+                key={key}
                 style={{
-                  fontSize: 10,
-                  fontWeight: 600,
-                  color: isOverall ? "rgba(99,102,241,0.8)" : "var(--color-text-faint)",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.06em",
-                  textAlign: "center",
+                  background: isOverall ? "rgba(99,102,241,0.07)" : "var(--color-surface)",
+                  border: isOverall
+                    ? "1px solid rgba(99,102,241,0.3)"
+                    : "1px solid var(--color-border)",
+                  borderRadius: "var(--radius-md)",
+                  padding: "12px 10px",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: 4,
+                  gridColumn: isOverall ? "span 2" : undefined,
                 }}
               >
-                {label}
-              </span>
-            </div>
-          );
-        })}
+                <div style={{ display: "flex", alignItems: "baseline", gap: 2 }}>
+                  <span
+                    className={scoreColor(score)}
+                    style={{ fontSize: isOverall ? 36 : 24, fontWeight: 700, lineHeight: 1 }}
+                  >
+                    {score}
+                  </span>
+                  <span style={{ fontSize: 11, color: "var(--color-text-faint)" }}>/10</span>
+                </div>
+                <span
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 600,
+                    color: isOverall ? "rgba(99,102,241,0.8)" : "var(--color-text-faint)",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.06em",
+                    textAlign: "center",
+                  }}
+                >
+                  {label}
+                </span>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       {/* Feedback */}
       <div>
-        <p style={{ fontSize: 10, fontWeight: 600, color: "var(--color-text-faint)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>
+        <p
+          style={{
+            fontSize: 10,
+            fontWeight: 600,
+            color: "var(--color-text-faint)",
+            textTransform: "uppercase",
+            letterSpacing: "0.08em",
+            marginBottom: 6,
+          }}
+        >
           Feedback
         </p>
-        <Card style={{ padding: "10px 12px" }}>
-          <p style={{ fontSize: 12, color: "var(--color-text-muted)", lineHeight: 1.6, margin: 0 }}>
+        <Card style={{ padding: "12px 14px" }}>
+          <p style={{ fontSize: 13, color: "var(--color-text-muted)", lineHeight: 1.6, margin: 0 }}>
             {feedback}
           </p>
         </Card>
@@ -672,14 +1035,23 @@ function ReviewPanel({ review }: { review: NonNullable<ReturnType<typeof useSess
       {/* Strengths */}
       {strengths.length > 0 && (
         <div>
-          <p style={{ fontSize: 10, fontWeight: 600, color: "#22c55e", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>
+          <p
+            style={{
+              fontSize: 10,
+              fontWeight: 600,
+              color: "#22c55e",
+              textTransform: "uppercase",
+              letterSpacing: "0.08em",
+              marginBottom: 6,
+            }}
+          >
             ✓ Strengths
           </p>
-          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
             {strengths.map((s, i) => (
-              <div key={i} style={{ display: "flex", gap: 6, alignItems: "flex-start" }}>
-                <span style={{ color: "rgba(34,197,94,0.5)", flexShrink: 0, fontSize: 12 }}>•</span>
-                <span style={{ fontSize: 12, color: "var(--color-text-muted)", lineHeight: 1.5 }}>{s}</span>
+              <div key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+                <span style={{ color: "rgba(34,197,94,0.5)", flexShrink: 0, fontSize: 13, marginTop: 1 }}>•</span>
+                <span style={{ fontSize: 13, color: "var(--color-text-muted)", lineHeight: 1.5 }}>{s}</span>
               </div>
             ))}
           </div>
@@ -689,14 +1061,23 @@ function ReviewPanel({ review }: { review: NonNullable<ReturnType<typeof useSess
       {/* Gaps */}
       {gaps.length > 0 && (
         <div>
-          <p style={{ fontSize: 10, fontWeight: 600, color: "#ef4444", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>
+          <p
+            style={{
+              fontSize: 10,
+              fontWeight: 600,
+              color: "#ef4444",
+              textTransform: "uppercase",
+              letterSpacing: "0.08em",
+              marginBottom: 6,
+            }}
+          >
             ✗ Gaps
           </p>
-          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
             {gaps.map((g, i) => (
-              <div key={i} style={{ display: "flex", gap: 6, alignItems: "flex-start" }}>
-                <span style={{ color: "rgba(239,68,68,0.5)", flexShrink: 0, fontSize: 12 }}>•</span>
-                <span style={{ fontSize: 12, color: "var(--color-text-muted)", lineHeight: 1.5 }}>{g}</span>
+              <div key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+                <span style={{ color: "rgba(239,68,68,0.5)", flexShrink: 0, fontSize: 13, marginTop: 1 }}>•</span>
+                <span style={{ fontSize: 13, color: "var(--color-text-muted)", lineHeight: 1.5 }}>{g}</span>
               </div>
             ))}
           </div>
@@ -706,14 +1087,23 @@ function ReviewPanel({ review }: { review: NonNullable<ReturnType<typeof useSess
       {/* Improvements */}
       {improvements.length > 0 && (
         <div>
-          <p style={{ fontSize: 10, fontWeight: 600, color: "var(--color-text-faint)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>
+          <p
+            style={{
+              fontSize: 10,
+              fontWeight: 600,
+              color: "var(--color-text-faint)",
+              textTransform: "uppercase",
+              letterSpacing: "0.08em",
+              marginBottom: 6,
+            }}
+          >
             Improvements
           </p>
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {improvements.map((imp, i) => {
               const colors = PRIORITY_COLORS[imp.priority] ?? PRIORITY_COLORS.medium;
               return (
-                <Card key={i} style={{ padding: "10px 12px" }}>
+                <Card key={i} style={{ padding: "12px 14px" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
                     <span
                       style={{
@@ -730,10 +1120,25 @@ function ReviewPanel({ review }: { review: NonNullable<ReturnType<typeof useSess
                       {imp.priority}
                     </span>
                   </div>
-                  <p style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text)", marginBottom: 3, lineHeight: 1.4 }}>
+                  <p
+                    style={{
+                      fontSize: 13,
+                      fontWeight: 600,
+                      color: "var(--color-text)",
+                      marginBottom: 4,
+                      lineHeight: 1.4,
+                    }}
+                  >
                     {imp.gap}
                   </p>
-                  <p style={{ fontSize: 12, color: "var(--color-text-muted)", marginBottom: imp.components.length > 0 ? 8 : 0, lineHeight: 1.5 }}>
+                  <p
+                    style={{
+                      fontSize: 13,
+                      color: "var(--color-text-muted)",
+                      marginBottom: imp.components.length > 0 ? 8 : 0,
+                      lineHeight: 1.5,
+                    }}
+                  >
                     {imp.fix}
                   </p>
                   {imp.components.length > 0 && (
@@ -742,11 +1147,11 @@ function ReviewPanel({ review }: { review: NonNullable<ReturnType<typeof useSess
                         <span
                           key={j}
                           style={{
-                            fontSize: 10,
+                            fontSize: 11,
                             fontWeight: 500,
                             background: "rgba(99,102,241,0.1)",
                             color: "rgba(99,102,241,0.9)",
-                            padding: "2px 6px",
+                            padding: "2px 7px",
                             borderRadius: 999,
                             border: "1px solid rgba(99,102,241,0.2)",
                           }}
@@ -764,8 +1169,8 @@ function ReviewPanel({ review }: { review: NonNullable<ReturnType<typeof useSess
       )}
 
       {reference_architecture_note && (
-        <Card style={{ padding: "10px 12px" }}>
-          <p style={{ fontSize: 11, color: "var(--color-text-faint)", lineHeight: 1.6, margin: 0 }}>
+        <Card style={{ padding: "12px 14px" }}>
+          <p style={{ fontSize: 12, color: "var(--color-text-faint)", lineHeight: 1.6, margin: 0 }}>
             <span style={{ fontWeight: 600, color: "var(--color-text-muted)" }}>📚 Reference:</span>{" "}
             {reference_architecture_note}
           </p>

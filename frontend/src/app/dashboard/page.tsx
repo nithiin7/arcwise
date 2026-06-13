@@ -357,60 +357,89 @@ export default function HomePage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.5, duration: 0.4 }}
-            style={{ width: "100%", marginTop: 36 }}
+            style={{ width: "100%", marginTop: 40 }}
           >
-            {/* Header row */}
+            {/* Section divider */}
             <div
               style={{
                 display: "flex",
                 alignItems: "center",
-                justifyContent: "space-between",
-                marginBottom: 8,
+                gap: 12,
+                marginBottom: 12,
               }}
             >
-              <p
+              <span
                 style={{
                   fontSize: 11,
-                  fontWeight: 500,
-                  letterSpacing: "0.06em",
+                  fontWeight: 600,
+                  letterSpacing: "0.07em",
                   textTransform: "uppercase",
                   color: "var(--color-text-faint)",
-                  margin: 0,
+                  flexShrink: 0,
                 }}
               >
                 Recent designs
-              </p>
-
-              {/* Search input */}
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-                  setShowAll(true);
-                }}
-                placeholder="Search…"
+              </span>
+              <div
                 style={{
-                  fontSize: 12,
-                  color: "var(--color-text)",
-                  background: "var(--color-surface)",
-                  border: "1px solid var(--color-border)",
-                  borderRadius: "var(--radius-sm)",
-                  padding: "4px 10px",
-                  outline: "none",
-                  width: 140,
-                  fontFamily: "inherit",
-                  transition: "border-color 0.15s",
-                }}
-                onFocus={(e) => {
-                  (e.currentTarget as HTMLInputElement).style.borderColor =
-                    "var(--color-primary)";
-                }}
-                onBlur={(e) => {
-                  (e.currentTarget as HTMLInputElement).style.borderColor =
-                    "var(--color-border)";
+                  flex: 1,
+                  height: 1,
+                  background: "var(--color-border)",
                 }}
               />
+              {/* Search input */}
+              <div style={{ position: "relative", flexShrink: 0 }}>
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  style={{
+                    position: "absolute",
+                    left: 8,
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    color: "var(--color-text-faint)",
+                    pointerEvents: "none",
+                  }}
+                >
+                  <circle cx="11" cy="11" r="8" />
+                  <path d="m21 21-4.35-4.35" />
+                </svg>
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => {
+                    setSearch(e.target.value);
+                    setShowAll(true);
+                  }}
+                  placeholder="Search…"
+                  style={{
+                    fontSize: 12,
+                    color: "var(--color-text)",
+                    background: "var(--color-surface)",
+                    border: "1px solid var(--color-border)",
+                    borderRadius: "var(--radius-sm)",
+                    padding: "4px 10px 4px 26px",
+                    outline: "none",
+                    width: 130,
+                    fontFamily: "inherit",
+                    transition: "border-color 0.15s",
+                  }}
+                  onFocus={(e) => {
+                    (e.currentTarget as HTMLInputElement).style.borderColor =
+                      "var(--color-primary)";
+                  }}
+                  onBlur={(e) => {
+                    (e.currentTarget as HTMLInputElement).style.borderColor =
+                      "var(--color-border)";
+                  }}
+                />
+              </div>
             </div>
 
             {/* Tag filter pills */}
@@ -420,7 +449,7 @@ export default function HomePage() {
                   display: "flex",
                   flexWrap: "wrap",
                   gap: 4,
-                  marginBottom: 8,
+                  marginBottom: 10,
                   alignItems: "center",
                 }}
               >
@@ -432,12 +461,12 @@ export default function HomePage() {
                       onClick={() => toggleTagFilter(tag)}
                       style={{
                         fontSize: 11,
-                        padding: "2px 8px",
+                        padding: "2px 9px",
                         borderRadius: 999,
                         border: active
                           ? "1px solid var(--color-primary)"
                           : "1px solid var(--color-border)",
-                        background: active ? "rgba(99,102,241,0.12)" : "transparent",
+                        background: active ? "rgba(99,102,241,0.1)" : "transparent",
                         color: active ? "var(--color-primary)" : "var(--color-text-faint)",
                         cursor: "pointer",
                         fontFamily: "inherit",
@@ -469,7 +498,7 @@ export default function HomePage() {
             )}
 
             {/* Session list */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               <AnimatePresence initial={false}>
                 {(isFiltering || showAll
                   ? filteredHistory
@@ -503,9 +532,9 @@ export default function HomePage() {
               <button
                 onClick={() => setShowAll((v) => !v)}
                 style={{
-                  marginTop: 6,
+                  marginTop: 8,
                   width: "100%",
-                  padding: "7px",
+                  padding: "8px",
                   borderRadius: "var(--radius-sm)",
                   border: "none",
                   background: "transparent",

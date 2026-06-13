@@ -22,8 +22,11 @@ Return ONLY valid JSON — no prose, no markdown fences:
   "explanation": "<3-4 paragraphs describing the architecture>",
   "mermaid_dsl": "flowchart LR\\n...",
   "component_justifications": { "ComponentName": "reason for inclusion" },
-  "scale_assumption": "<'Assumed X DAU based on problem context' or 'Based on user input: X'>"
-}"""
+  "scale_assumption": "<'Assumed X DAU based on problem context' or 'Based on user input: X'>",
+  "tags": ["<tag1>", "<tag2>"]
+}
+
+For "tags": exactly 1-2 short lowercase labels (e.g. "url-shortener", "high-scale", "real-time", "microservices", "caching", "streaming"). These categorize the system type and key architectural property."""
 
 
 async def suggest_architecture(session: Session) -> tuple[dict[str, Any], LLMUsage]:

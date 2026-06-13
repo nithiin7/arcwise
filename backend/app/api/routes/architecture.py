@@ -20,6 +20,9 @@ async def architecture_suggest(
     session.architecture.llm_explanation = result.get("explanation", "")
     session.architecture.component_justifications = result.get("component_justifications", {})
     session.architecture.scale_assumption = result.get("scale_assumption", "")
+    if not session.tags:
+        raw_tags = result.get("tags", [])
+        session.tags = [t.lower().strip() for t in raw_tags if isinstance(t, str)][:2]
     session.token_usage = session.token_usage + TokenUsage(
         prompt_tokens=usage.prompt_tokens,
         completion_tokens=usage.completion_tokens,

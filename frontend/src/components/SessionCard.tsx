@@ -9,32 +9,12 @@ import { formatDate } from "@/lib/utils";
 
 const STATUS_CONFIG: Record<
   SessionSummary["status"],
-  { label: string; color: string; bg: string; border: string }
+  { label: string; color: string }
 > = {
-  complete: {
-    label: "Complete",
-    color: "var(--color-success)",
-    bg: "rgba(34, 197, 94, 0.1)",
-    border: "rgba(34, 197, 94, 0.2)",
-  },
-  reviewing: {
-    label: "Reviewing",
-    color: "var(--color-primary)",
-    bg: "rgba(99, 102, 241, 0.1)",
-    border: "rgba(99, 102, 241, 0.2)",
-  },
-  designing: {
-    label: "Designing",
-    color: "#f59e0b",
-    bg: "rgba(245, 158, 11, 0.1)",
-    border: "rgba(245, 158, 11, 0.2)",
-  },
-  clarifying: {
-    label: "Clarifying",
-    color: "var(--color-text-faint)",
-    bg: "rgba(161, 161, 170, 0.1)",
-    border: "rgba(161, 161, 170, 0.2)",
-  },
+  complete: { label: "Complete", color: "var(--color-success)" },
+  reviewing: { label: "Reviewing", color: "var(--color-primary)" },
+  designing: { label: "Designing", color: "#f59e0b" },
+  clarifying: { label: "Clarifying", color: "var(--color-text-faint)" },
 };
 
 function sessionHref(s: SessionSummary) {
@@ -84,14 +64,18 @@ export default function SessionCard({
     onTagsChange(s.id, s.tags.filter((t) => t !== tag));
   }
 
+  const hasTags = s.tags.length > 0;
+  const tagsVisible = hasTags || hovered || addingTag;
+
   return (
     <div
       style={{
         position: "relative",
         borderRadius: "var(--radius-md)",
-        border: `1px solid ${hovered ? "var(--color-primary)" : "var(--color-border)"}`,
-        background: hovered ? "var(--color-surface-2)" : "var(--color-surface)",
-        transition: "border-color 0.15s, background 0.15s",
+        border: "1px solid var(--color-border)",
+        background: "var(--color-surface)",
+        boxShadow: hovered ? "0 0 0 1px var(--color-primary)" : "none",
+        transition: "box-shadow 0.15s",
       }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => {
@@ -103,48 +87,76 @@ export default function SessionCard({
       <Link
         href={sessionHref(s)}
         style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: 6,
-          padding: "12px 48px 8px 16px",
+          display: "block",
+          padding: "14px 40px 12px 16px",
           textDecoration: "none",
         }}
       >
-        {/* Problem */}
-        <span
+        {/* Problem title — up to 2 lines */}
+        <p
           style={{
             fontSize: 14,
             fontWeight: 500,
             color: "var(--color-text)",
+            lineHeight: 1.5,
+            marginBottom: 8,
             overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-            lineHeight: 1.4,
+            display: "-webkit-box",
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: "vertical",
           }}
         >
           {s.problem}
-        </span>
+        </p>
 
-        {/* Meta row: status left, date + score right */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        {/* Meta row */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          {/* Status dot + label */}
           <span
             style={{
-              fontSize: 11,
-              fontWeight: 500,
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 5,
+              fontSize: 12,
               color: status.color,
-              background: status.bg,
-              border: `1px solid ${status.border}`,
-              borderRadius: 999,
-              padding: "2px 7px",
-              lineHeight: 1.6,
               flexShrink: 0,
             }}
           >
+            <span
+              style={{
+                width: 5,
+                height: 5,
+                borderRadius: "50%",
+                background: status.color,
+                flexShrink: 0,
+              }}
+            />
             {status.label}
           </span>
 
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            {s.overall_score !== null && (
+          <span
+            style={{
+              width: 1,
+              height: 10,
+              background: "var(--color-border)",
+              flexShrink: 0,
+            }}
+          />
+
+          <span style={{ fontSize: 12, color: "var(--color-text-faint)" }}>
+            {formatDate(s.created_at)}
+          </span>
+
+          {s.overall_score !== null && (
+            <>
+              <span
+                style={{
+                  width: 1,
+                  height: 10,
+                  background: "var(--color-border)",
+                  flexShrink: 0,
+                }}
+              />
               <span
                 style={{
                   fontSize: 12,
@@ -154,39 +166,24 @@ export default function SessionCard({
                 }}
               >
                 {s.overall_score}
-                <span style={{ fontSize: 10, fontWeight: 400, opacity: 0.6 }}>/10</span>
+                <span style={{ fontSize: 11, fontWeight: 400, opacity: 0.55 }}>/10</span>
               </span>
-            )}
-            {s.token_usage && s.token_usage.total_tokens > 0 && (
-              <span
-                title={`${s.token_usage.total_tokens.toLocaleString()} tokens`}
-                style={{
-                  fontSize: 11,
-                  color: "var(--color-text-faint)",
-                  fontVariantNumeric: "tabular-nums",
-                }}
-              >
-                {s.token_usage.cost_usd > 0
-                  ? `$${s.token_usage.cost_usd < 0.01 ? s.token_usage.cost_usd.toFixed(4) : s.token_usage.cost_usd.toFixed(3)}`
-                  : `${(s.token_usage.total_tokens / 1000).toFixed(1)}k tok`}
-              </span>
-            )}
-            <span style={{ fontSize: 11, color: "var(--color-text-faint)" }}>
-              {formatDate(s.created_at)}
-            </span>
-          </div>
+            </>
+          )}
         </div>
       </Link>
 
-      {/* Tags row — outside Link to avoid navigation on click */}
+      {/* Tags row — always rendered, max-height animates to avoid layout jump on hover */}
       <div
         style={{
+          overflow: "hidden",
+          maxHeight: tagsVisible ? 60 : 0,
+          padding: tagsVisible ? "0 40px 10px 16px" : 0,
+          transition: "max-height 0.15s ease, padding 0.15s ease",
           display: "flex",
           flexWrap: "wrap",
           gap: 4,
-          padding: "0 16px 10px 16px",
           alignItems: "center",
-          minHeight: 26,
         }}
         onClick={(e) => e.preventDefault()}
       >
@@ -204,11 +201,10 @@ export default function SessionCard({
                   alignItems: "center",
                   gap: 3,
                   fontSize: 11,
-                  color: "var(--color-text-muted)",
-                  background: "rgba(99, 102, 241, 0.08)",
-                  border: "1px solid rgba(99, 102, 241, 0.18)",
+                  color: "var(--color-text-faint)",
+                  background: "var(--color-surface-2)",
                   borderRadius: 999,
-                  padding: "2px 7px",
+                  padding: "2px 8px",
                   lineHeight: 1.5,
                 }}
               >
@@ -284,13 +280,14 @@ export default function SessionCard({
                 cursor: "pointer",
                 fontSize: 13,
                 lineHeight: 1,
-                visibility: hovered ? "visible" : "hidden",
+                opacity: hovered ? 1 : 0,
+                transition: "opacity 0.15s",
               }}
             >
               +
             </button>
           )}
-      </div>
+        </div>
 
       {/* Delete button */}
       <button
@@ -305,12 +302,12 @@ export default function SessionCard({
         style={{
           position: "absolute",
           right: 10,
-          top: 20,
+          top: 14,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          width: 28,
-          height: 28,
+          width: 26,
+          height: 26,
           borderRadius: "var(--radius-sm)",
           border: "none",
           background: deleteHovered ? "rgba(239,68,68,0.08)" : "transparent",

@@ -1,6 +1,6 @@
 import re
 
-from app.services.llm import complete, extract_json
+from app.services.llm import LLMUsage, complete, extract_json
 
 SYSTEM_PROMPT = """\
 You are an expert systems architect refining an existing Mermaid architecture diagram.
@@ -28,13 +28,13 @@ def _sanitize_mermaid(mermaid: str) -> str:
 
 async def refine_architecture(
     current_mermaid: str, user_message: str, model: str, api_key: str | None = None
-) -> dict[str, str]:
+) -> tuple[dict[str, str], LLMUsage]:
     user_prompt = (
         f"Current diagram:\n{current_mermaid}\n\nRequested change:\n{user_message}"
     )
-    raw = await complete(
+    raw, usage = await complete(
         system=SYSTEM_PROMPT, user=user_prompt, model=model, api_key=api_key, json_mode=True
     )
     result = extract_json(raw)
     result["updated_mermaid"] = _sanitize_mermaid(result["updated_mermaid"])
-    return result
+    return result, usage

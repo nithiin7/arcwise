@@ -5,7 +5,7 @@ from sqlalchemy import select
 from app.db.engine import AsyncSessionLocal
 from app.db.models import SessionRecord
 from app.models.review import Review
-from app.models.session import Architecture, ClarificationQA, Revision, Session
+from app.models.session import Architecture, ClarificationQA, Revision, Session, TokenUsage
 
 
 def _record_to_session(record: SessionRecord) -> Session:
@@ -22,6 +22,14 @@ def _record_to_session(record: SessionRecord) -> Session:
         user_description=raw_arch.get("user_description"),
     )
 
+    raw_usage = record.token_usage or {}
+    token_usage = TokenUsage(
+        prompt_tokens=raw_usage.get("prompt_tokens", 0),
+        completion_tokens=raw_usage.get("completion_tokens", 0),
+        total_tokens=raw_usage.get("total_tokens", 0),
+        cost_usd=raw_usage.get("cost_usd", 0.0),
+    )
+
     return Session(
         id=record.id,
         problem=record.problem,
@@ -33,6 +41,7 @@ def _record_to_session(record: SessionRecord) -> Session:
         status=record.status,  # type: ignore[arg-type]
         review=Review(**record.review) if record.review else None,
         tags=list(record.tags or []),
+        token_usage=token_usage,
         share_token=record.share_token,
         created_at=record.created_at,
     )
@@ -73,6 +82,7 @@ async def save_session(session: Session) -> None:
                     architecture=_arch_to_json(session),
                     review=session.review.model_dump(mode="json") if session.review else None,
                     tags=session.tags,
+                    token_usage=session.token_usage.model_dump(),
                     share_token=session.share_token,
                     created_at=session.created_at,
                 )
@@ -89,6 +99,7 @@ async def save_session(session: Session) -> None:
                 session.review.model_dump(mode="json") if session.review else None
             )
             existing.tags = session.tags
+            existing.token_usage = session.token_usage.model_dump()
             existing.share_token = session.share_token
         await db.commit()
 

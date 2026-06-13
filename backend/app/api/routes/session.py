@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from app.agents.clarification import generate_clarifications
-from app.models.session import ClarificationQA, CreateSessionRequest, Session
+from app.models.session import ClarificationQA, CreateSessionRequest, Session, TokenUsage
 from app.services.session_store import (
     delete_session,
     get_session,
@@ -31,6 +31,7 @@ async def get_sessions() -> list[dict[str, Any]]:
             "status": s.status,
             "overall_score": s.review.scores.overall if s.review else None,
             "tags": s.tags,
+            "token_usage": s.token_usage.model_dump() if s.token_usage else None,
             "created_at": s.created_at.isoformat(),
         }
         for s in sessions
@@ -64,7 +65,7 @@ async def delete_session_by_id(session_id: str) -> None:
 
 @router.post("")
 async def create_session(body: CreateSessionRequest) -> dict[str, Any]:
-    questions_data = await generate_clarifications(
+    questions_data, usage = await generate_clarifications(
         body.problem, model=body.model, api_key=body.api_key
     )
     session = Session(
@@ -75,6 +76,12 @@ async def create_session(body: CreateSessionRequest) -> dict[str, Any]:
             ClarificationQA(question=q["question"], options=q.get("options", []))
             for q in questions_data
         ],
+        token_usage=TokenUsage(
+            prompt_tokens=usage.prompt_tokens,
+            completion_tokens=usage.completion_tokens,
+            total_tokens=usage.total_tokens,
+            cost_usd=usage.cost_usd,
+        ),
     )
     await save_session(session)
     return {

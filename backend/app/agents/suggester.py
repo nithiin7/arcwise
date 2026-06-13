@@ -1,7 +1,7 @@
 from typing import Any
 
 from app.models.session import Session
-from app.services.llm import complete, extract_json
+from app.services.llm import LLMUsage, complete, extract_json
 
 SYSTEM_PROMPT = """You are a principal engineer tasked with producing a recommended system architecture.
 
@@ -26,7 +26,7 @@ Return ONLY valid JSON — no prose, no markdown fences:
 }"""
 
 
-async def suggest_architecture(session: Session) -> dict[str, Any]:
+async def suggest_architecture(session: Session) -> tuple[dict[str, Any], LLMUsage]:
     lines: list[str] = [f"Problem: {session.problem}"]
     if session.user_scale:
         lines.append(f"User-stated scale: {session.user_scale}")
@@ -37,8 +37,8 @@ async def suggest_architecture(session: Session) -> dict[str, Any]:
                 lines.append(f"  Q: {qa.question}")
                 lines.append(f"  A: {qa.answer}")
     user_prompt = "\n".join(lines)
-    raw = await complete(
+    raw, usage = await complete(
         system=SYSTEM_PROMPT, user=user_prompt, model=session.model,
         api_key=session.api_key, max_tokens=8192, json_mode=True,
     )
-    return extract_json(raw)
+    return extract_json(raw), usage

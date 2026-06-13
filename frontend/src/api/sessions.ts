@@ -1,5 +1,5 @@
 import { del, get, patch, post } from "@/lib/api";
-import type { Session } from "@/types";
+import type { Session, TokenUsage } from "@/types";
 
 export interface CreateSessionResponse {
   session_id: string;
@@ -15,6 +15,7 @@ export interface SessionSummary {
   status: "clarifying" | "designing" | "reviewing" | "complete";
   overall_score: number | null;
   tags: string[];
+  token_usage: TokenUsage | null;
   created_at: string;
 }
 

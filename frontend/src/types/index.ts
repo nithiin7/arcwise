@@ -48,6 +48,13 @@ export interface Review {
 
 export type SessionStatus = "clarifying" | "designing" | "reviewing" | "complete";
 
+export interface TokenUsage {
+  prompt_tokens: number;
+  completion_tokens: number;
+  total_tokens: number;
+  cost_usd: number;
+}
+
 export interface Session {
   id: string;
   problem: string;
@@ -57,6 +64,7 @@ export interface Session {
   architecture: Architecture;
   status: SessionStatus;
   review?: Review;
+  token_usage?: TokenUsage;
   share_token?: string;
   created_at?: string;
 }

@@ -25,6 +25,7 @@ class SessionRecord(Base):
     architecture: Mapped[Any] = mapped_column(JSONB, nullable=False, default=dict)
     review: Mapped[Any] = mapped_column(JSONB, nullable=True)
     tags: Mapped[Any] = mapped_column(JSONB, nullable=False, default=list)
+    token_usage: Mapped[Any] = mapped_column(JSONB, nullable=True)
     share_token: Mapped[str | None] = mapped_column(String, nullable=True, unique=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=_now

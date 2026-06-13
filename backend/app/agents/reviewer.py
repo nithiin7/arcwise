@@ -2,7 +2,7 @@ from typing import Any
 
 from app.knowledge.graph import get_reference_note
 from app.models.session import Session
-from app.services.llm import complete, extract_json
+from app.services.llm import LLMUsage, complete, extract_json
 
 SYSTEM_PROMPT = """You are a senior engineering interviewer evaluating a candidate's system design submission.
 
@@ -39,7 +39,7 @@ Return ONLY valid JSON — no prose, no markdown fences:
 }"""
 
 
-async def review_design(session: Session) -> dict[str, Any]:
+async def review_design(session: Session) -> tuple[dict[str, Any], LLMUsage]:
     arch = session.architecture
     current_mermaid = arch.final_mermaid or arch.llm_suggested_mermaid
 
@@ -66,8 +66,8 @@ async def review_design(session: Session) -> dict[str, Any]:
         lines.append(f"\nReference guidance:\n{reference_note}")
 
     user_prompt = "\n".join(lines)
-    raw = await complete(
+    raw, usage = await complete(
         system=SYSTEM_PROMPT, user=user_prompt, model=session.model,
         api_key=session.api_key, max_tokens=8192, json_mode=True,
     )
-    return extract_json(raw)
+    return extract_json(raw), usage

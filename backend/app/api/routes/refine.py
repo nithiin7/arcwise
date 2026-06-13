@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from app.agents.refiner import refine_architecture
 from app.api.deps import get_session_or_404
-from app.models.session import RefineArchitectureRequest, Revision, Session
+from app.models.session import RefineArchitectureRequest, Revision, Session, TokenUsage
 from app.services.session_store import save_session
 
 router = APIRouter()
@@ -19,7 +19,7 @@ async def refine(
     current_mermaid = (
         session.architecture.final_mermaid or session.architecture.llm_suggested_mermaid
     )
-    result = await refine_architecture(
+    result, usage = await refine_architecture(
         current_mermaid, body.message, model=session.model, api_key=session.api_key
     )
     revision = Revision(
@@ -29,6 +29,12 @@ async def refine(
     )
     session.architecture.revisions.append(revision)
     session.architecture.final_mermaid = result["updated_mermaid"]
+    session.token_usage = session.token_usage + TokenUsage(
+        prompt_tokens=usage.prompt_tokens,
+        completion_tokens=usage.completion_tokens,
+        total_tokens=usage.total_tokens,
+        cost_usd=usage.cost_usd,
+    )
     await save_session(session)
     return {
         "updated_mermaid": result["updated_mermaid"],

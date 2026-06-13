@@ -157,6 +157,20 @@ export default function SessionCard({
                 <span style={{ fontSize: 10, fontWeight: 400, opacity: 0.6 }}>/10</span>
               </span>
             )}
+            {s.token_usage && s.token_usage.total_tokens > 0 && (
+              <span
+                title={`${s.token_usage.total_tokens.toLocaleString()} tokens`}
+                style={{
+                  fontSize: 11,
+                  color: "var(--color-text-faint)",
+                  fontVariantNumeric: "tabular-nums",
+                }}
+              >
+                {s.token_usage.cost_usd > 0
+                  ? `$${s.token_usage.cost_usd < 0.01 ? s.token_usage.cost_usd.toFixed(4) : s.token_usage.cost_usd.toFixed(3)}`
+                  : `${(s.token_usage.total_tokens / 1000).toFixed(1)}k tok`}
+              </span>
+            )}
             <span style={{ fontSize: 11, color: "var(--color-text-faint)" }}>
               {formatDate(s.created_at)}
             </span>

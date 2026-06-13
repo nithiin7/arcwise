@@ -1,6 +1,6 @@
 from typing import Any
 
-from app.services.llm import complete, extract_json
+from app.services.llm import LLMUsage, complete, extract_json
 
 SYSTEM_PROMPT = """You are a friendly product and engineering advisor helping someone think through their system design idea.
 Given a system design problem, generate exactly 5 clarifying questions to ask before proposing any architecture.
@@ -33,11 +33,11 @@ def _parse_questions(data: dict[str, Any]) -> list[dict[str, Any]]:
 
 async def generate_clarifications(
     problem: str, model: str, api_key: str | None = None
-) -> list[dict[str, Any]]:
+) -> tuple[list[dict[str, Any]], LLMUsage]:
     user_prompt = f"System design problem:\n{problem}"
-    raw = await complete(
+    raw, usage = await complete(
         system=SYSTEM_PROMPT, user=user_prompt, model=model,
         api_key=api_key, max_tokens=8192, json_mode=True,
     )
     data = extract_json(raw)
-    return _parse_questions(data)
+    return _parse_questions(data), usage

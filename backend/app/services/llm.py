@@ -4,10 +4,31 @@ import re
 from collections.abc import AsyncGenerator
 from typing import Any
 
+import litellm
 from json_repair import repair_json
 from litellm import acompletion
 
 from app.core.config import settings
+
+
+class LLMUsage:
+    __slots__ = ("prompt_tokens", "completion_tokens", "total_tokens", "cost_usd")
+
+    def __init__(
+        self, prompt_tokens: int, completion_tokens: int, total_tokens: int, cost_usd: float
+    ) -> None:
+        self.prompt_tokens = prompt_tokens
+        self.completion_tokens = completion_tokens
+        self.total_tokens = total_tokens
+        self.cost_usd = cost_usd
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "prompt_tokens": self.prompt_tokens,
+            "completion_tokens": self.completion_tokens,
+            "total_tokens": self.total_tokens,
+            "cost_usd": self.cost_usd,
+        }
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +74,7 @@ async def complete(
     api_key: str | None = None,
     max_tokens: int = 4096,
     json_mode: bool = False,
-) -> str:
+) -> tuple[str, LLMUsage]:
     response = await acompletion(
         model=model,
         messages=[
@@ -68,7 +89,18 @@ async def complete(
     logger.warning("LLM raw content (first 300 chars): %r", (content or "")[:300])
     if not isinstance(content, str):
         raise TypeError(f"Unexpected content type: {type(content).__name__}")
-    return content
+    usage = response.usage or {}
+    try:
+        cost = litellm.completion_cost(completion_response=response)
+    except Exception:
+        cost = 0.0
+    llm_usage = LLMUsage(
+        prompt_tokens=getattr(usage, "prompt_tokens", 0) or 0,
+        completion_tokens=getattr(usage, "completion_tokens", 0) or 0,
+        total_tokens=getattr(usage, "total_tokens", 0) or 0,
+        cost_usd=cost or 0.0,
+    )
+    return content, llm_usage
 
 
 async def stream_complete(

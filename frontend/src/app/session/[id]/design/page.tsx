@@ -266,6 +266,31 @@ export default function DesignPage() {
           {session.problem}
         </span>
 
+        {session.token_usage && session.token_usage.total_tokens > 0 && (
+          <div
+            title={`${session.token_usage.total_tokens.toLocaleString()} tokens`}
+            style={{
+              display: "flex",
+              alignItems: "baseline",
+              gap: 3,
+              background: "var(--color-surface)",
+              border: "1px solid var(--color-border)",
+              borderRadius: "var(--radius-md)",
+              padding: "4px 10px",
+              flexShrink: 0,
+            }}
+          >
+            <span style={{ fontSize: 11, color: "var(--color-text-faint)", fontWeight: 500, marginRight: 2 }}>
+              Cost
+            </span>
+            <span style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-muted)", lineHeight: 1, fontVariantNumeric: "tabular-nums" }}>
+              {session.token_usage.cost_usd > 0
+                ? `$${session.token_usage.cost_usd < 0.01 ? session.token_usage.cost_usd.toFixed(4) : session.token_usage.cost_usd.toFixed(3)}`
+                : `${(session.token_usage.total_tokens / 1000).toFixed(1)}k tok`}
+            </span>
+          </div>
+        )}
+
         {overallScore !== undefined && (
           <div
             style={{

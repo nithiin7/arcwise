@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import mermaidLib from "mermaid";
+import { toast } from "sonner";
 import { useSettingsStore } from "@/store/settingsStore";
 import Spinner from "@/components/icons/Spinner";
 import type { ArchitectureCanvasProps } from "@/types";
@@ -32,6 +33,7 @@ export function ArchitectureCanvas({ mermaid: diagram, isLoading, onEditCode }: 
     const isDark = resolvedTheme === "dark";
     mermaidLib.initialize({
       startOnLoad: false,
+      suppressErrorRendering: true,
       theme: isDark ? "dark" : "default",
       themeVariables: isDark
         ? {
@@ -63,9 +65,16 @@ export function ArchitectureCanvas({ mermaid: diagram, isLoading, onEditCode }: 
         setSvg(rendered);
         setSvgKey((k) => k + 1);
       })
-      .catch((err: unknown) => {
-        setError(err instanceof Error ? err.message : "Failed to render diagram");
+      .catch(() => {
+        // If we already have a valid SVG, keep showing it and just toast.
+        // Only set the error state (blank canvas) on the very first render.
+        if (svg) {
+          toast.error("Syntax error in diagram — the previous valid diagram is still shown.");
+        } else {
+          setError("Syntax error in diagram");
+        }
       });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [diagram, resolvedTheme]);
 
   // Fit diagram to container after each new render
@@ -165,7 +174,7 @@ export function ArchitectureCanvas({ mermaid: diagram, isLoading, onEditCode }: 
           </motion.div>
         )}
 
-        {!isLoading && error && (
+        {!isLoading && error && !svg && (
           <motion.div
             key="error"
             initial={{ opacity: 0 }}
@@ -191,10 +200,10 @@ export function ArchitectureCanvas({ mermaid: diagram, isLoading, onEditCode }: 
               }}
             >
               <p style={{ fontWeight: 600, fontSize: 14, color: "var(--color-error)", marginBottom: 4 }}>
-                Render error
+                Syntax error in diagram
               </p>
               <p style={{ fontSize: 13, color: "var(--color-text-muted)", lineHeight: 1.6 }}>
-                {error}
+                Check the diagram code for syntax errors.
               </p>
             </div>
           </motion.div>

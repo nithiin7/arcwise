@@ -8,6 +8,21 @@ from app.core.config import settings
 from app.models.review import Review
 
 
+class TokenUsage(BaseModel):
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+    total_tokens: int = 0
+    cost_usd: float = 0.0
+
+    def __add__(self, other: "TokenUsage") -> "TokenUsage":
+        return TokenUsage(
+            prompt_tokens=self.prompt_tokens + other.prompt_tokens,
+            completion_tokens=self.completion_tokens + other.completion_tokens,
+            total_tokens=self.total_tokens + other.total_tokens,
+            cost_usd=self.cost_usd + other.cost_usd,
+        )
+
+
 class ClarificationQA(BaseModel):
     question: str
     answer: str = ""
@@ -42,6 +57,7 @@ class Session(BaseModel):
     status: Literal["clarifying", "designing", "reviewing", "complete"] = "clarifying"
     review: Review | None = None
     tags: list[str] = Field(default_factory=list)
+    token_usage: TokenUsage = Field(default_factory=TokenUsage)
     share_token: str | None = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 

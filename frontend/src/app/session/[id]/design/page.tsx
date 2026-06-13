@@ -279,56 +279,91 @@ export default function DesignPage() {
       {/* Body */}
       <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
         {/* Diagram area */}
-        <div style={{ flex: 1, overflow: "hidden", position: "relative" }}>
-          {previewIndex !== null && (
-            <div
-              style={{
-                position: "absolute",
-                top: 10,
-                left: "50%",
-                transform: "translateX(-50%)",
-                zIndex: 10,
-                background: "var(--color-surface)",
-                border: "1px solid var(--color-border)",
-                borderRadius: "var(--radius-md)",
-                padding: "5px 10px 5px 14px",
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                fontSize: 12,
-                color: "var(--color-text-muted)",
-                fontFamily: "inherit",
-                boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
-                whiteSpace: "nowrap",
-                maxWidth: "calc(100% - 32px)",
-              }}
-            >
-              <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
-                Viewing: <strong style={{ color: "var(--color-text)" }}>{previewLabel}</strong>
-              </span>
-              <button
-                onClick={() => setPreviewIndex(null)}
-                style={{
-                  background: "transparent",
-                  border: "none",
-                  cursor: "pointer",
-                  color: "var(--color-text-faint)",
-                  fontSize: 16,
-                  lineHeight: 1,
-                  padding: "0 2px",
-                  flexShrink: 0,
-                  fontFamily: "inherit",
-                }}
-              >
-                ×
-              </button>
-            </div>
+        <div style={{ flex: 1, overflow: "hidden", display: "flex" }}>
+          {previewIndex !== null ? (
+            <>
+              {/* Left: historical revision */}
+              <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column", borderRight: "1px solid var(--color-border)" }}>
+                <div
+                  style={{
+                    height: 32,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    padding: "0 12px",
+                    borderBottom: "1px solid var(--color-border)",
+                    background: "var(--color-surface)",
+                    flexShrink: 0,
+                    gap: 8,
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: 12,
+                      color: "var(--color-text-muted)",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {previewLabel}
+                  </span>
+                  <button
+                    onClick={() => setPreviewIndex(null)}
+                    style={{
+                      background: "transparent",
+                      border: "none",
+                      cursor: "pointer",
+                      color: "var(--color-text-faint)",
+                      fontSize: 16,
+                      lineHeight: 1,
+                      padding: "0 2px",
+                      flexShrink: 0,
+                      fontFamily: "inherit",
+                    }}
+                  >
+                    ×
+                  </button>
+                </div>
+                <div style={{ flex: 1, overflow: "hidden" }}>
+                  <ArchitectureCanvas
+                    mermaid={displayedMermaid}
+                    isLoading={false}
+                    scaleAssumption={arch.scale_assumption}
+                  />
+                </div>
+              </div>
+              {/* Right: current state */}
+              <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+                <div
+                  style={{
+                    height: 32,
+                    display: "flex",
+                    alignItems: "center",
+                    padding: "0 12px",
+                    borderBottom: "1px solid var(--color-border)",
+                    background: "var(--color-surface)",
+                    flexShrink: 0,
+                  }}
+                >
+                  <span style={{ fontSize: 12, color: "var(--color-text-muted)" }}>Current</span>
+                </div>
+                <div style={{ flex: 1, overflow: "hidden" }}>
+                  <ArchitectureCanvas
+                    mermaid={currentMermaid}
+                    isLoading={suggestMutation.isPending}
+                    scaleAssumption={arch.scale_assumption}
+                  />
+                </div>
+              </div>
+            </>
+          ) : (
+            <ArchitectureCanvas
+              mermaid={currentMermaid}
+              isLoading={suggestMutation.isPending}
+              scaleAssumption={arch.scale_assumption}
+            />
           )}
-          <ArchitectureCanvas
-            mermaid={displayedMermaid}
-            isLoading={suggestMutation.isPending}
-            scaleAssumption={arch.scale_assumption}
-          />
         </div>
 
         {/* Right panel */}

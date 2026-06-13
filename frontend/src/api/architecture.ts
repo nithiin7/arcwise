@@ -25,14 +25,14 @@ export function refineArchitecture(
   sessionId: string,
   message: string,
 ): Promise<RefineArchitectureResponse> {
-  return post(`/sessions/${sessionId}/architecture/refine`, { message });
+  return post(`/sessions/${sessionId}/refine`, { message });
 }
 
 export function revertRevision(
   sessionId: string,
   revisionIndex: number,
 ): Promise<RevertRevisionResponse> {
-  return post(`/sessions/${sessionId}/architecture/revert`, { revision_index: revisionIndex });
+  return post(`/sessions/${sessionId}/refine/revert/${revisionIndex}`);
 }
 
 export function submitArchitecture(sessionId: string, userDescription?: string): Promise<void> {

@@ -41,6 +41,7 @@ class Session(BaseModel):
     architecture: Architecture = Field(default_factory=Architecture)
     status: Literal["clarifying", "designing", "reviewing", "complete"] = "clarifying"
     review: Review | None = None
+    share_token: str | None = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 

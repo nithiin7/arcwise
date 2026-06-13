@@ -326,6 +326,40 @@ export function ArchitectureCanvas({ mermaid: diagram, isLoading }: Architecture
           >
             +
           </button>
+
+          <div style={{ width: 1, height: 16, background: "var(--color-border)", margin: "0 2px" }} />
+
+          <button
+            onClick={() => {
+              const svgEl = svgWrapperRef.current?.querySelector("svg");
+              if (!svgEl) return;
+              const serialized = new XMLSerializer().serializeToString(svgEl);
+              const blob = new Blob([serialized], { type: "image/svg+xml" });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = "architecture.svg";
+              a.click();
+              URL.revokeObjectURL(url);
+            }}
+            title="Download as SVG"
+            style={{
+              width: 28,
+              height: 28,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              borderRadius: "var(--radius-sm)",
+              border: "none",
+              background: "transparent",
+              color: "var(--color-text-muted)",
+              cursor: "pointer",
+              fontSize: 14,
+              lineHeight: 1,
+            }}
+          >
+            ↓
+          </button>
         </div>
       )}
     </div>

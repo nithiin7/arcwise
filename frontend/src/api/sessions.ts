@@ -44,3 +44,11 @@ export function listSessions(): Promise<SessionSummary[]> {
 export function deleteSession(sessionId: string): Promise<void> {
   return del(`/sessions/${sessionId}`);
 }
+
+export function createShareLink(sessionId: string): Promise<{ share_token: string }> {
+  return post(`/sessions/${sessionId}/share`);
+}
+
+export function getSharedSession(token: string): Promise<Session> {
+  return get(`/share/${token}`);
+}

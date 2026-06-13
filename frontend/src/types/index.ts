@@ -57,6 +57,8 @@ export interface Session {
   architecture: Architecture;
   status: SessionStatus;
   review?: Review;
+  share_token?: string;
+  created_at?: string;
 }
 
 export interface ChatMessage {

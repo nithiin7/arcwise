@@ -17,6 +17,7 @@ import type { Revision } from "@/types";
 import { ArchitectureCanvas } from "@/components/design/ArchitectureCanvas";
 import { HistoryArrow, HistoryPill } from "@/components/design/HistoryStrip";
 import { ReviewPanel } from "@/components/design/ReviewPanel";
+import { ShareModal } from "@/components/design/ShareModal";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import BackArrow from "@/components/icons/BackArrow";
@@ -41,6 +42,7 @@ export default function DesignPage() {
   const reset = useSessionStore((s) => s.reset);
 
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>(() => {
     const { review, session: s } = useSessionStore.getState();
     return review || s?.review ? "review" : "refine";
@@ -284,6 +286,17 @@ export default function DesignPage() {
             <span style={{ fontSize: 10, color: "var(--color-text-faint)" }}>/10</span>
           </div>
         )}
+
+        <Button
+          variant="secondary"
+          onClick={async () => {
+            const { share_token } = await api.createShareLink(sessionId);
+            setShareUrl(`${window.location.origin}/share/${share_token}`);
+          }}
+          disabled={!currentMermaid}
+        >
+          Share
+        </Button>
 
         {!hasReview && (
           <Button
@@ -833,6 +846,10 @@ export default function DesignPage() {
           )}
         </div>
       </div>
+
+      {shareUrl && (
+        <ShareModal shareUrl={shareUrl} onClose={() => setShareUrl(null)} />
+      )}
     </div>
   );
 }

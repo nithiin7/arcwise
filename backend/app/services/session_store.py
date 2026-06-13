@@ -32,6 +32,7 @@ def _record_to_session(record: SessionRecord) -> Session:
         architecture=architecture,
         status=record.status,  # type: ignore[arg-type]
         review=Review(**record.review) if record.review else None,
+        share_token=record.share_token,
         created_at=record.created_at,
     )
 
@@ -70,6 +71,7 @@ async def save_session(session: Session) -> None:
                     clarifications=[c.model_dump(mode="json") for c in session.clarifications],
                     architecture=_arch_to_json(session),
                     review=session.review.model_dump(mode="json") if session.review else None,
+                    share_token=session.share_token,
                     created_at=session.created_at,
                 )
             )
@@ -84,6 +86,7 @@ async def save_session(session: Session) -> None:
             existing.review = (
                 session.review.model_dump(mode="json") if session.review else None
             )
+            existing.share_token = session.share_token
         await db.commit()
 
 
@@ -93,6 +96,15 @@ async def delete_session(session_id: str) -> None:
         if record is not None:
             await db.delete(record)
             await db.commit()
+
+
+async def get_session_by_share_token(token: str) -> Session | None:
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(
+            select(SessionRecord).where(SessionRecord.share_token == token)
+        )
+        record = result.scalar_one_or_none()
+        return _record_to_session(record) if record is not None else None
 
 
 async def list_sessions(limit: int = 50) -> list[Session]:

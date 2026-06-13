@@ -133,7 +133,7 @@ export default function HomePage() {
   }
 
   return (
-    <div className="relative flex min-h-screen flex-1 flex-col items-center justify-center overflow-hidden px-4">
+    <div className="relative flex min-h-screen flex-1 flex-col items-center px-4">
       {/* Ambient glow */}
       <div
         aria-hidden
@@ -181,6 +181,7 @@ export default function HomePage() {
 
       <motion.div
         className="relative z-10 flex w-full max-w-2xl flex-col items-center"
+        style={{ paddingTop: "5rem", paddingBottom: "5rem" }}
         initial={{ opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
@@ -356,7 +357,7 @@ export default function HomePage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.5, duration: 0.4 }}
-            style={{ width: "100%", marginTop: 44 }}
+            style={{ width: "100%", marginTop: 36 }}
           >
             {/* Header row */}
             <div

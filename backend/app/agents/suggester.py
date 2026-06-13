@@ -1,3 +1,5 @@
+from typing import Any
+
 from app.models.session import Session
 from app.services.llm import complete, extract_json
 
@@ -24,7 +26,7 @@ Return ONLY valid JSON — no prose, no markdown fences:
 }"""
 
 
-async def suggest_architecture(session: Session) -> dict:
+async def suggest_architecture(session: Session) -> dict[str, Any]:
     lines: list[str] = [f"Problem: {session.problem}"]
     if session.user_scale:
         lines.append(f"User-stated scale: {session.user_scale}")

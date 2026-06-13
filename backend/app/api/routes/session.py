@@ -63,7 +63,7 @@ async def delete_session_by_id(session_id: str) -> None:
 
 
 @router.post("")
-async def create_session(body: CreateSessionRequest) -> dict:
+async def create_session(body: CreateSessionRequest) -> dict[str, Any]:
     questions_data = await generate_clarifications(
         body.problem, model=body.model, api_key=body.api_key
     )

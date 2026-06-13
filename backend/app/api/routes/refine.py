@@ -1,3 +1,5 @@
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException
 
 from app.agents.refiner import refine_architecture
@@ -13,7 +15,7 @@ async def refine(
     session_id: str,
     body: RefineArchitectureRequest,
     session: Session = Depends(get_session_or_404),
-) -> dict:
+) -> dict[str, Any]:
     current_mermaid = (
         session.architecture.final_mermaid or session.architecture.llm_suggested_mermaid
     )
@@ -40,7 +42,7 @@ async def revert(
     session_id: str,
     revision_index: int,
     session: Session = Depends(get_session_or_404),
-) -> dict:
+) -> dict[str, Any]:
     revisions = session.architecture.revisions
     if revision_index == -1:
         session.architecture.revisions = []

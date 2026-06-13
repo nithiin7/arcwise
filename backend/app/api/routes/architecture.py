@@ -1,3 +1,5 @@
+from typing import Any
+
 from fastapi import APIRouter, Depends
 
 from app.agents.suggester import suggest_architecture
@@ -12,7 +14,7 @@ router = APIRouter()
 async def architecture_suggest(
     session_id: str,
     session: Session = Depends(get_session_or_404),
-) -> dict:
+) -> dict[str, Any]:
     result = await suggest_architecture(session)
     session.architecture.llm_suggested_mermaid = result.get("mermaid_dsl", "")
     session.architecture.llm_explanation = result.get("explanation", "")
@@ -32,7 +34,7 @@ async def architecture_update_mermaid(
     session_id: str,
     body: UpdateMermaidRequest,
     session: Session = Depends(get_session_or_404),
-) -> dict:
+) -> dict[str, Any]:
     session.architecture.final_mermaid = body.mermaid
     await save_session(session)
     return {"ok": True}
@@ -43,7 +45,7 @@ async def architecture_submit(
     session_id: str,
     body: SubmitArchitectureRequest,
     session: Session = Depends(get_session_or_404),
-) -> dict:
+) -> dict[str, Any]:
     if body.user_description is not None:
         session.architecture.user_description = body.user_description
     session.status = "reviewing"

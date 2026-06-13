@@ -1,3 +1,5 @@
+from typing import Any
+
 import httpx
 from fastapi import APIRouter
 
@@ -7,7 +9,7 @@ router = APIRouter()
 
 
 @router.get("/ollama")
-async def list_ollama_models() -> dict:
+async def list_ollama_models() -> dict[str, Any]:
     try:
         async with httpx.AsyncClient(timeout=3.0) as client:
             resp = await client.get(f"{settings.ollama_base_url}/api/tags")

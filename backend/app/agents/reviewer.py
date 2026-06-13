@@ -1,3 +1,5 @@
+from typing import Any
+
 from app.knowledge.graph import get_reference_note
 from app.models.session import Session
 from app.services.llm import complete, extract_json
@@ -37,7 +39,7 @@ Return ONLY valid JSON — no prose, no markdown fences:
 }"""
 
 
-async def review_design(session: Session) -> dict:
+async def review_design(session: Session) -> dict[str, Any]:
     arch = session.architecture
     current_mermaid = arch.final_mermaid or arch.llm_suggested_mermaid
 

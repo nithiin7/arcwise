@@ -1,3 +1,5 @@
+from typing import Any
+
 from app.services.llm import complete, extract_json
 
 SYSTEM_PROMPT = """You are a friendly product and engineering advisor helping someone think through their system design idea.
@@ -18,7 +20,7 @@ Return ONLY valid JSON — no prose, no markdown fences:
 { "questions": [{"question": "q1", "options": ["opt1", "opt2", "opt3"]}, ...] }"""
 
 
-def _parse_questions(data: dict) -> list[dict]:
+def _parse_questions(data: dict[str, Any]) -> list[dict[str, Any]]:
     """Accept both {question, options} objects and bare strings (fallback for weaker models)."""
     result = []
     for q in data["questions"]:
@@ -31,7 +33,7 @@ def _parse_questions(data: dict) -> list[dict]:
 
 async def generate_clarifications(
     problem: str, model: str, api_key: str | None = None
-) -> list[dict]:
+) -> list[dict[str, Any]]:
     user_prompt = f"System design problem:\n{problem}"
     raw = await complete(
         system=SYSTEM_PROMPT, user=user_prompt, model=model,

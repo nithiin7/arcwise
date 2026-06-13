@@ -13,7 +13,7 @@ _client = AsyncAnthropic(api_key=settings.anthropic_api_key)
 
 async def complete(system: str, user: str, max_tokens: int = 4096) -> str:
     message = await _client.messages.create(
-        model=settings.claude_model,
+        model=settings.default_model,
         max_tokens=max_tokens,
         system=system,
         messages=[{"role": "user", "content": user}],
@@ -28,7 +28,7 @@ async def stream_complete(
     system: str, user: str, max_tokens: int = 4096
 ) -> AsyncGenerator[str, None]:
     async with _client.messages.stream(
-        model=settings.claude_model,
+        model=settings.default_model,
         max_tokens=max_tokens,
         system=system,
         messages=[{"role": "user", "content": user}],

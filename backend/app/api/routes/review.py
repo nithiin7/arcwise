@@ -1,3 +1,5 @@
+from typing import Any
+
 from fastapi import APIRouter, Depends
 
 from app.agents.reviewer import review_design
@@ -13,7 +15,7 @@ router = APIRouter()
 async def review(
     session_id: str,
     session: Session = Depends(get_session_or_404),
-) -> dict:
+) -> dict[str, Any]:
     result = await review_design(session)
     session.status = "complete"
     session.review = Review(**result)

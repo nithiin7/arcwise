@@ -1,5 +1,6 @@
 "use client";
 
+import { motion } from "framer-motion";
 import { scoreColor } from "@/lib/utils";
 import type { Review } from "@/types";
 import { Card } from "@/components/ui/Card";
@@ -24,13 +25,22 @@ export function ReviewPanel({ review }: { review: Review }) {
         >
           Scores
         </p>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 6 }}>
+        <motion.div
+          style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 6 }}
+          initial="hidden"
+          animate="show"
+          variants={{ hidden: {}, show: { transition: { staggerChildren: 0.06 } } }}
+        >
           {SCORE_KEYS.map(({ key, label }) => {
             const score = scores[key];
             const isOverall = key === "overall";
             return (
-              <div
+              <motion.div
                 key={key}
+                variants={{
+                  hidden: { opacity: 0, scale: 0.92 },
+                  show: { opacity: 1, scale: 1, transition: { duration: 0.22, ease: [0.16, 1, 0.3, 1] } },
+                }}
                 style={{
                   background: isOverall ? "rgba(99,102,241,0.07)" : "var(--color-surface)",
                   border: isOverall
@@ -66,10 +76,10 @@ export function ReviewPanel({ review }: { review: Review }) {
                 >
                   {label}
                 </span>
-              </div>
+              </motion.div>
             );
           })}
-        </div>
+        </motion.div>
       </div>
 
       {/* Feedback */}
@@ -160,11 +170,23 @@ export function ReviewPanel({ review }: { review: Review }) {
           >
             Improvements
           </p>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <motion.div
+            style={{ display: "flex", flexDirection: "column", gap: 8 }}
+            initial="hidden"
+            animate="show"
+            variants={{ hidden: {}, show: { transition: { staggerChildren: 0.07, delayChildren: 0.1 } } }}
+          >
             {improvements.map((imp, i) => {
               const colors = PRIORITY_COLORS[imp.priority] ?? PRIORITY_COLORS.medium;
               return (
-                <Card key={i} style={{ padding: "12px 14px" }}>
+                <motion.div
+                  key={i}
+                  variants={{
+                    hidden: { opacity: 0, y: 8 },
+                    show: { opacity: 1, y: 0, transition: { duration: 0.22, ease: [0.16, 1, 0.3, 1] } },
+                  }}
+                >
+                <Card style={{ padding: "12px 14px" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
                     <span
                       style={{
@@ -223,9 +245,10 @@ export function ReviewPanel({ review }: { review: Review }) {
                     </div>
                   )}
                 </Card>
+                </motion.div>
               );
             })}
-          </div>
+          </motion.div>
         </div>
       )}
 

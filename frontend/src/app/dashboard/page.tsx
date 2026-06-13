@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { KeyboardEvent, useState } from "react";
@@ -470,18 +470,28 @@ export default function HomePage() {
 
             {/* Session list */}
             <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-              {(isFiltering || showAll
-                ? filteredHistory
-                : filteredHistory.slice(0, HISTORY_PAGE_SIZE)
-              ).map((s) => (
-                <SessionCard
-                  key={s.id}
-                  session={s}
-                  onDelete={(id) => deleteMutation.mutate(id)}
-                  onTagsChange={(id, tags) => tagsMutation.mutate({ id, tags })}
-                  deleteDisabled={deleteMutation.isPending}
-                />
-              ))}
+              <AnimatePresence initial={false}>
+                {(isFiltering || showAll
+                  ? filteredHistory
+                  : filteredHistory.slice(0, HISTORY_PAGE_SIZE)
+                ).map((s) => (
+                  <motion.div
+                    key={s.id}
+                    layout
+                    initial={{ opacity: 0, x: -12 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -12 }}
+                    transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                  >
+                    <SessionCard
+                      session={s}
+                      onDelete={(id) => deleteMutation.mutate(id)}
+                      onTagsChange={(id, tags) => tagsMutation.mutate({ id, tags })}
+                      deleteDisabled={deleteMutation.isPending}
+                    />
+                  </motion.div>
+                ))}
+              </AnimatePresence>
               {isFiltering && filteredHistory.length === 0 && (
                 <p style={{ fontSize: 13, color: "var(--color-text-faint)", textAlign: "center", padding: "16px 0" }}>
                   No sessions match.

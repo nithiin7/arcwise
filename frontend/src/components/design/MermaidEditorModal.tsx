@@ -1,5 +1,6 @@
 "use client";
 
+import { motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import CodeMirror from "@uiw/react-codemirror";
 import { vscodeDark, vscodeLight } from "@uiw/codemirror-theme-vscode";
@@ -50,7 +51,11 @@ export function MermaidEditorModal({ initialMermaid, onApply, onClose }: Mermaid
   const isUnchanged = code === initialMermaid;
 
   return (
-    <div
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.15 }}
       style={{
         position: "fixed",
         inset: 0,
@@ -65,7 +70,11 @@ export function MermaidEditorModal({ initialMermaid, onApply, onClose }: Mermaid
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div
+      <motion.div
+        initial={{ opacity: 0, scale: 0.96, y: 12 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.96, y: 8 }}
+        transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
         style={{
           width: "min(90vw, 1100px)",
           height: "min(85vh, 720px)",
@@ -231,7 +240,7 @@ export function MermaidEditorModal({ initialMermaid, onApply, onClose }: Mermaid
             {isApplying ? "Applying…" : "Apply changes"}
           </Button>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { KeyboardEvent, useRef, useState } from "react";
 
@@ -175,48 +176,55 @@ export default function SessionCard({
         }}
         onClick={(e) => e.preventDefault()}
       >
-          {s.tags.map((tag) => (
-            <span
-              key={tag}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 3,
-                fontSize: 11,
-                color: "var(--color-text-muted)",
-                background: "rgba(99, 102, 241, 0.08)",
-                border: "1px solid rgba(99, 102, 241, 0.18)",
-                borderRadius: 999,
-                padding: "2px 7px",
-                lineHeight: 1.5,
-              }}
-            >
-              {tag}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  e.preventDefault();
-                  removeTag(tag);
-                }}
+          <AnimatePresence initial={false} mode="popLayout">
+            {s.tags.map((tag) => (
+              <motion.span
+                key={tag}
+                layout
+                initial={{ opacity: 0, scale: 0.75 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.75 }}
+                transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
                 style={{
                   display: "inline-flex",
                   alignItems: "center",
-                  justifyContent: "center",
-                  width: 12,
-                  height: 12,
-                  padding: 0,
-                  border: "none",
-                  background: "transparent",
-                  color: "var(--color-text-faint)",
-                  cursor: "pointer",
-                  lineHeight: 1,
+                  gap: 3,
                   fontSize: 11,
+                  color: "var(--color-text-muted)",
+                  background: "rgba(99, 102, 241, 0.08)",
+                  border: "1px solid rgba(99, 102, 241, 0.18)",
+                  borderRadius: 999,
+                  padding: "2px 7px",
+                  lineHeight: 1.5,
                 }}
               >
-                ×
-              </button>
-            </span>
-          ))}
+                {tag}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    removeTag(tag);
+                  }}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: 12,
+                    height: 12,
+                    padding: 0,
+                    border: "none",
+                    background: "transparent",
+                    color: "var(--color-text-faint)",
+                    cursor: "pointer",
+                    lineHeight: 1,
+                    fontSize: 11,
+                  }}
+                >
+                  ×
+                </button>
+              </motion.span>
+            ))}
+          </AnimatePresence>
 
           {addingTag ? (
             <input

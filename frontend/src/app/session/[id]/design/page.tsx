@@ -570,9 +570,18 @@ export default function DesignPage() {
             </div>
           )}
 
+          {/* Tab content with slide animation */}
+          <AnimatePresence mode="wait" initial={false}>
           {/* Refine tab */}
           {activeTab === "refine" && (
-            <>
+            <motion.div
+              key="refine"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+              style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}
+            >
               {/* Scale assumption */}
               {arch.scale_assumption && (
                 <div
@@ -837,12 +846,19 @@ export default function DesignPage() {
                   {refineMutation.isPending ? <Spinner /> : <SendIcon />}
                 </Button>
               </div>
-            </>
+            </motion.div>
           )}
 
           {/* Review tab */}
           {activeTab === "review" && (
-            <div style={{ flex: 1, overflowY: "auto", padding: "16px" }}>
+            <motion.div
+              key="review"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+              style={{ flex: 1, overflowY: "auto", padding: "16px" }}
+            >
               {isReviewing && !review ? (
                 <div
                   style={{
@@ -882,25 +898,30 @@ export default function DesignPage() {
                   <ReviewPanel review={review} />
                 </>
               ) : null}
-            </div>
+            </motion.div>
           )}
+          </AnimatePresence>
         </div>
       </div>
 
-      {shareUrl && (
-        <ShareModal shareUrl={shareUrl} onClose={() => setShareUrl(null)} />
-      )}
+      <AnimatePresence>
+        {shareUrl && (
+          <ShareModal shareUrl={shareUrl} onClose={() => setShareUrl(null)} />
+        )}
+      </AnimatePresence>
 
-      {codeEditorOpen && (
-        <MermaidEditorModal
-          initialMermaid={currentMermaid}
-          onApply={async (mermaid) => {
-            await api.updateMermaid(sessionId, mermaid);
-            updateArchitectureMermaid(mermaid);
-          }}
-          onClose={() => setCodeEditorOpen(false)}
-        />
-      )}
+      <AnimatePresence>
+        {codeEditorOpen && (
+          <MermaidEditorModal
+            initialMermaid={currentMermaid}
+            onApply={async (mermaid) => {
+              await api.updateMermaid(sessionId, mermaid);
+              updateArchitectureMermaid(mermaid);
+            }}
+            onClose={() => setCodeEditorOpen(false)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

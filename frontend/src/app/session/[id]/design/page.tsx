@@ -309,19 +309,19 @@ export default function DesignPage() {
             title={`${session.token_usage.total_tokens.toLocaleString()} tokens`}
             style={{
               display: "flex",
-              alignItems: "baseline",
-              gap: 3,
+              alignItems: "center",
+              gap: 4,
               background: "var(--color-surface)",
               border: "1px solid var(--color-border)",
-              borderRadius: "var(--radius-md)",
-              padding: "4px 10px",
+              borderRadius: "var(--radius-sm)",
+              padding: "7px 12px",
               flexShrink: 0,
             }}
           >
-            <span style={{ fontSize: 11, color: "var(--color-text-faint)", fontWeight: 500, marginRight: 2 }}>
+            <span style={{ fontSize: 11, color: "var(--color-text-faint)", fontWeight: 500 }}>
               Cost
             </span>
-            <span style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-muted)", lineHeight: 1, fontVariantNumeric: "tabular-nums" }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-muted)", fontVariantNumeric: "tabular-nums" }}>
               {session.token_usage.cost_usd > 0
                 ? `$${session.token_usage.cost_usd < 0.01 ? session.token_usage.cost_usd.toFixed(4) : session.token_usage.cost_usd.toFixed(3)}`
                 : `${(session.token_usage.total_tokens / 1000).toFixed(1)}k tok`}
@@ -333,22 +333,22 @@ export default function DesignPage() {
           <div
             style={{
               display: "flex",
-              alignItems: "baseline",
-              gap: 3,
+              alignItems: "center",
+              gap: 4,
               background: "var(--color-surface)",
               border: "1px solid var(--color-border)",
-              borderRadius: "var(--radius-md)",
-              padding: "4px 12px",
+              borderRadius: "var(--radius-sm)",
+              padding: "7px 12px",
               flexShrink: 0,
             }}
           >
-            <span style={{ fontSize: 11, color: "var(--color-text-faint)", fontWeight: 500, marginRight: 2 }}>
+            <span style={{ fontSize: 11, color: "var(--color-text-faint)", fontWeight: 500 }}>
               Score
             </span>
-            <span className={scoreColor(overallScore)} style={{ fontSize: 16, fontWeight: 700, lineHeight: 1 }}>
+            <span className={scoreColor(overallScore)} style={{ fontSize: 13, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>
               {overallScore}
             </span>
-            <span style={{ fontSize: 10, color: "var(--color-text-faint)" }}>/10</span>
+            <span style={{ fontSize: 11, color: "var(--color-text-faint)" }}>/10</span>
           </div>
         )}
 
@@ -501,6 +501,29 @@ export default function DesignPage() {
                 isLoading={suggestMutation.isPending}
                 scaleAssumption={arch.scale_assumption}
                 onEditCode={() => setCodeEditorOpen(true)}
+                onExportJson={() => {
+                  const data = {
+                    problem: session.problem,
+                    mermaid: currentMermaid,
+                    explanation: arch.llm_explanation,
+                    scale_assumption: arch.scale_assumption,
+                    component_justifications: arch.component_justifications,
+                    revisions: arch.revisions.map((r) => ({
+                      message: r.user_message,
+                      diff_summary: r.diff_summary,
+                      timestamp: r.timestamp,
+                    })),
+                    review: review ?? undefined,
+                    exported_at: new Date().toISOString(),
+                  };
+                  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = "architecture.json";
+                  a.click();
+                  URL.revokeObjectURL(url);
+                }}
               />
             )}
           </div>

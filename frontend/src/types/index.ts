@@ -120,6 +120,7 @@ export interface ArchitectureCanvasProps {
   isLoading: boolean;
   scaleAssumption?: string;
   onEditCode?: () => void;
+  onExportJson?: () => void;
 }
 
 export interface ComponentJustificationsProps {

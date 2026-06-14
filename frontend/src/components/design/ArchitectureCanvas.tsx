@@ -16,7 +16,7 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
 
-export function ArchitectureCanvas({ mermaid: diagram, isLoading, onEditCode }: ArchitectureCanvasProps) {
+export function ArchitectureCanvas({ mermaid: diagram, isLoading, onEditCode, onExportJson }: ArchitectureCanvasProps) {
   const [svg, setSvg] = useState("");
   const [svgKey, setSvgKey] = useState(0);
   const [error, setError] = useState("");
@@ -354,8 +354,8 @@ export function ArchitectureCanvas({ mermaid: diagram, isLoading, onEditCode }: 
             }}
             title="Download as SVG"
             style={{
-              width: 28,
               height: 28,
+              padding: "0 7px",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -364,12 +364,93 @@ export function ArchitectureCanvas({ mermaid: diagram, isLoading, onEditCode }: 
               background: "transparent",
               color: "var(--color-text-muted)",
               cursor: "pointer",
-              fontSize: 14,
+              fontSize: 11,
+              fontWeight: 600,
               lineHeight: 1,
             }}
           >
-            ↓
+            SVG
           </button>
+
+          <button
+            onClick={() => {
+              const svgEl = svgWrapperRef.current?.querySelector("svg");
+              if (!svgEl) return;
+              const bbox = svgEl.getBoundingClientRect();
+              if (!bbox.width || !bbox.height) return;
+              const scale = 2;
+              const cloned = svgEl.cloneNode(true) as SVGSVGElement;
+              cloned.setAttribute("width", String(bbox.width));
+              cloned.setAttribute("height", String(bbox.height));
+              const serialized = new XMLSerializer().serializeToString(cloned);
+              const svgBlob = new Blob([serialized], { type: "image/svg+xml;charset=utf-8" });
+              const svgUrl = URL.createObjectURL(svgBlob);
+              const img = new Image();
+              img.onload = () => {
+                const canvas = document.createElement("canvas");
+                canvas.width = bbox.width * scale;
+                canvas.height = bbox.height * scale;
+                const ctx = canvas.getContext("2d")!;
+                ctx.scale(scale, scale);
+                ctx.fillStyle = resolvedTheme === "dark" ? "#18181b" : "#ffffff";
+                ctx.fillRect(0, 0, bbox.width, bbox.height);
+                ctx.drawImage(img, 0, 0);
+                URL.revokeObjectURL(svgUrl);
+                canvas.toBlob((pngBlob) => {
+                  if (!pngBlob) return;
+                  const pngUrl = URL.createObjectURL(pngBlob);
+                  const a = document.createElement("a");
+                  a.href = pngUrl;
+                  a.download = "architecture.png";
+                  a.click();
+                  URL.revokeObjectURL(pngUrl);
+                }, "image/png");
+              };
+              img.src = svgUrl;
+            }}
+            title="Download as PNG"
+            style={{
+              height: 28,
+              padding: "0 7px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              borderRadius: "var(--radius-sm)",
+              border: "none",
+              background: "transparent",
+              color: "var(--color-text-muted)",
+              cursor: "pointer",
+              fontSize: 11,
+              fontWeight: 600,
+              lineHeight: 1,
+            }}
+          >
+            PNG
+          </button>
+
+          {onExportJson && (
+            <button
+              onClick={onExportJson}
+              title="Download as JSON spec"
+              style={{
+                height: 28,
+                padding: "0 7px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                borderRadius: "var(--radius-sm)",
+                border: "none",
+                background: "transparent",
+                color: "var(--color-text-muted)",
+                cursor: "pointer",
+                fontSize: 11,
+                fontWeight: 600,
+                lineHeight: 1,
+              }}
+            >
+              JSON
+            </button>
+          )}
 
           {onEditCode && (
             <>

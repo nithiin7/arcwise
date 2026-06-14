@@ -29,6 +29,37 @@ import ChevronDown from "@/components/icons/ChevronDown";
 
 type Tab = "refine" | "review";
 
+const MERMAID_KEYWORDS = new Set([
+  'graph', 'flowchart', 'subgraph', 'end', 'style', 'classDef', 'class',
+  'click', 'LR', 'TD', 'TB', 'RL', 'BT', 'direction', 'linkStyle',
+]);
+
+function getMermaidNodeIds(dsl: string): Set<string> {
+  // Strip label content so words inside [labels] aren't mistaken for node IDs
+  const stripped = dsl
+    .replace(/\[[^\]]*\]/g, '[]')
+    .replace(/\([^)]*\)/g, '()')
+    .replace(/\{[^}]*\}/g, '{}');
+  const ids = new Set<string>();
+  // No \s* — require bracket to immediately follow the identifier
+  for (const m of stripped.matchAll(/\b([A-Za-z_][A-Za-z0-9_]*)[\[({]/g)) {
+    if (!MERMAID_KEYWORDS.has(m[1])) ids.add(m[1]);
+  }
+  return ids;
+}
+
+function withNewNodeHighlights(before: string, after: string): string {
+  if (!before || !/^\s*(graph|flowchart)\b/m.test(after)) return after;
+  const beforeIds = getMermaidNodeIds(before);
+  const newIds = [...getMermaidNodeIds(after)].filter(id => !beforeIds.has(id));
+  if (newIds.length === 0) return after;
+  // Use stroke only — rgba() commas break Mermaid's style directive parser
+  const styleLines = newIds
+    .map(id => `style ${id} stroke:#6366f1,stroke-width:2px`)
+    .join('\n');
+  return `${after}\n${styleLines}`;
+}
+
 export default function DesignPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
@@ -160,17 +191,6 @@ export default function DesignPage() {
     },
   });
 
-  const revertMutation = useMutation({
-    mutationFn: (index: number) => api.revertRevision(sessionId, index),
-    onSuccess: (result) => {
-      updateArchitectureMermaid(result.mermaid);
-      setPreviewIndex(null);
-    },
-    onError: (err) => {
-      toast.error(err instanceof Error ? err.message : "Failed to revert revision.");
-    },
-  });
-
   const reviewMutation = useMutation({
     mutationFn: () =>
       api.streamReviewDesign(sessionId, (chunk) =>
@@ -203,18 +223,25 @@ export default function DesignPage() {
   const arch = session.architecture;
   const currentMermaid = arch.final_mermaid || arch.llm_suggested_mermaid || "";
 
-  const displayedMermaid =
-    previewIndex === null
-      ? currentMermaid
-      : previewIndex === -1
-      ? arch.llm_suggested_mermaid
-      : arch.revisions[previewIndex]?.updated_mermaid ?? currentMermaid;
-
   const previewLabel =
     previewIndex === -1
       ? "Initial design"
       : previewIndex !== null
       ? arch.revisions[previewIndex]?.diff_summary
+      : null;
+
+  const revisionBeforeMermaid =
+    previewIndex !== null && previewIndex >= 0
+      ? previewIndex === 0
+        ? arch.llm_suggested_mermaid
+        : arch.revisions[previewIndex - 1]?.updated_mermaid ?? arch.llm_suggested_mermaid
+      : null;
+
+  const revisionBeforeLabel =
+    previewIndex !== null && previewIndex >= 0
+      ? previewIndex === 0
+        ? "Initial design"
+        : arch.revisions[previewIndex - 1]?.diff_summary ?? "Previous"
       : null;
 
   function handleView(index: number) {
@@ -376,7 +403,6 @@ export default function DesignPage() {
           <div style={{ flex: 1, overflow: "hidden", display: "flex" }}>
             {previewIndex !== null ? (
               <>
-                {/* Historical revision */}
                 <div
                   style={{
                     flex: 1,
@@ -386,6 +412,38 @@ export default function DesignPage() {
                     borderRight: "1px solid var(--color-border)",
                   }}
                 >
+                  <div
+                    style={{
+                      height: 32,
+                      display: "flex",
+                      alignItems: "center",
+                      padding: "0 12px",
+                      borderBottom: "1px solid var(--color-border)",
+                      background: "var(--color-surface)",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: 12,
+                        color: "var(--color-text-muted)",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {previewIndex === -1 ? "Initial design" : revisionBeforeLabel}
+                    </span>
+                  </div>
+                  <div style={{ flex: 1, overflow: "hidden" }}>
+                    <ArchitectureCanvas
+                      mermaid={previewIndex === -1 ? arch.llm_suggested_mermaid : (revisionBeforeMermaid ?? "")}
+                      isLoading={false}
+                      scaleAssumption={arch.scale_assumption}
+                    />
+                  </div>
+                </div>
+                <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
                   <div
                     style={{
                       height: 32,
@@ -408,7 +466,7 @@ export default function DesignPage() {
                         whiteSpace: "nowrap",
                       }}
                     >
-                      {previewLabel}
+                      {previewIndex === -1 ? "Current" : previewLabel}
                     </span>
                     <button
                       onClick={() => setPreviewIndex(null)}
@@ -429,33 +487,10 @@ export default function DesignPage() {
                   </div>
                   <div style={{ flex: 1, overflow: "hidden" }}>
                     <ArchitectureCanvas
-                      mermaid={displayedMermaid}
-                      isLoading={false}
+                      mermaid={previewIndex === -1 ? currentMermaid : withNewNodeHighlights(revisionBeforeMermaid ?? "", arch.revisions[previewIndex]?.updated_mermaid ?? currentMermaid)}
+                      isLoading={previewIndex === -1 && suggestMutation.isPending}
                       scaleAssumption={arch.scale_assumption}
-                    />
-                  </div>
-                </div>
-                {/* Current state */}
-                <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
-                  <div
-                    style={{
-                      height: 32,
-                      display: "flex",
-                      alignItems: "center",
-                      padding: "0 12px",
-                      borderBottom: "1px solid var(--color-border)",
-                      background: "var(--color-surface)",
-                      flexShrink: 0,
-                    }}
-                  >
-                    <span style={{ fontSize: 12, color: "var(--color-text-muted)" }}>Current</span>
-                  </div>
-                  <div style={{ flex: 1, overflow: "hidden" }}>
-                    <ArchitectureCanvas
-                      mermaid={currentMermaid}
-                      isLoading={suggestMutation.isPending}
-                      scaleAssumption={arch.scale_assumption}
-                      onEditCode={() => setCodeEditorOpen(true)}
+                      onEditCode={previewIndex === -1 ? () => setCodeEditorOpen(true) : undefined}
                     />
                   </div>
                 </div>
@@ -504,9 +539,7 @@ export default function DesignPage() {
                   <HistoryPill
                     label="Initial"
                     isViewing={previewIndex === -1}
-                    canRevert={false}
                     onView={() => handleView(-1)}
-                    onRevert={() => {}}
                   />
                   {arch.revisions.length > 0 && <HistoryArrow />}
                 </>
@@ -517,9 +550,7 @@ export default function DesignPage() {
                   <HistoryPill
                     label={rev.diff_summary}
                     isViewing={previewIndex === i}
-                    canRevert={true}
                     onView={() => handleView(i)}
-                    onRevert={() => revertMutation.mutate(i)}
                   />
                   {i < arch.revisions.length - 1 && <HistoryArrow />}
                 </span>

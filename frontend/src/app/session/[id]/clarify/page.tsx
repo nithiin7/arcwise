@@ -119,7 +119,7 @@ export default function ClarifyPage() {
   const progressFill = ((step + 1) / totalSteps) * 100;
 
   return (
-    <div className="flex flex-col items-center min-h-screen px-4 py-8" style={{ background: "var(--color-bg)" }}>
+    <div className="flex flex-col items-center min-h-screen px-4 pt-12 pb-8" style={{ background: "var(--color-bg)" }}>
       {/* Progress bar */}
       <div className="w-full max-w-2xl mb-10">
         <div
@@ -133,7 +133,7 @@ export default function ClarifyPage() {
               key={i}
               style={{
                 flex: 1,
-                height: 3,
+                height: 4,
                 borderRadius: 999,
                 background: "var(--color-surface-offset)",
                 overflow: "hidden",

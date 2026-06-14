@@ -20,14 +20,10 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
+    default = '{"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0, "cost_usd": 0.0}'
     op.add_column(
         "sessions",
-        sa.Column(
-            "token_usage",
-            JSONB,
-            nullable=True,
-            server_default='{"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0, "cost_usd": 0.0}',
-        ),
+        sa.Column("token_usage", JSONB, nullable=True, server_default=default),
     )
 
 

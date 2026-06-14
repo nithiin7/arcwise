@@ -204,6 +204,12 @@ export default function DesignPage() {
           },
         });
       }
+      result.new_badges?.forEach((badge) =>
+        toast(`${badge.icon} Badge Unlocked: ${badge.name}`, {
+          description: badge.description,
+          duration: 5000,
+        }),
+      );
       inputFocusRef.current?.focus();
     },
     onError: (err) => {
@@ -217,9 +223,15 @@ export default function DesignPage() {
         setStreamingFeedback((prev) => (prev ?? "") + chunk),
       ),
     onMutate: () => setStreamingFeedback(""),
-    onSuccess: (r) => {
+    onSuccess: ({ review, newBadges }) => {
       setStreamingFeedback(null);
-      setReview(r);
+      setReview(review);
+      newBadges?.forEach((badge) =>
+        toast(`${badge.icon} Badge Unlocked: ${badge.name}`, {
+          description: badge.description,
+          duration: 5000,
+        }),
+      );
     },
     onError: (err) => {
       setStreamingFeedback(null);
@@ -229,7 +241,13 @@ export default function DesignPage() {
 
   const submitMutation = useMutation({
     mutationFn: () => api.submitArchitecture(sessionId),
-    onSuccess: () => {
+    onSuccess: (result) => {
+      result.new_badges?.forEach((badge) =>
+        toast(`${badge.icon} Badge Unlocked: ${badge.name}`, {
+          description: badge.description,
+          duration: 5000,
+        }),
+      );
       setActiveTab("review");
       reviewMutation.mutate();
     },
@@ -408,7 +426,13 @@ export default function DesignPage() {
         <Button
           variant="secondary"
           onClick={async () => {
-            const { share_token } = await api.createShareLink(sessionId);
+            const { share_token, new_badges } = await api.createShareLink(sessionId);
+            new_badges?.forEach((badge) =>
+              toast(`${badge.icon} Badge Unlocked: ${badge.name}`, {
+                description: badge.description,
+                duration: 5000,
+              }),
+            );
             setShareUrl(`${window.location.origin}/share/${share_token}`);
           }}
           disabled={!currentMermaid}

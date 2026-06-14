@@ -1,4 +1,5 @@
 import { post, patch } from "@/lib/api";
+import type { BadgeAward } from "@/types";
 
 export interface SuggestArchitectureResponse {
   explanation: string;
@@ -11,6 +12,12 @@ export interface RefineArchitectureResponse {
   updated_mermaid: string;
   diff_summary: string;
   revision_index: number;
+  new_badges: BadgeAward[];
+}
+
+export interface SubmitArchitectureResponse {
+  status: string;
+  new_badges: BadgeAward[];
 }
 
 export interface RevertRevisionResponse {
@@ -46,7 +53,10 @@ export function updateMermaid(sessionId: string, mermaid: string): Promise<{ ok:
   return patch(`/sessions/${sessionId}/architecture/mermaid`, { mermaid });
 }
 
-export function submitArchitecture(sessionId: string, userDescription?: string): Promise<void> {
+export function submitArchitecture(
+  sessionId: string,
+  userDescription?: string,
+): Promise<SubmitArchitectureResponse> {
   return post(`/sessions/${sessionId}/architecture/submit`, {
     user_description: userDescription,
   });

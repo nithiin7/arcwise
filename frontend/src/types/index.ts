@@ -1,3 +1,16 @@
+export interface Badge {
+  id: string;
+  earned_at: string;
+}
+
+export interface BadgeAward {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  earned_at: string;
+}
+
 export interface AuthUser {
   id: string;
   email: string;
@@ -7,6 +20,7 @@ export interface AuthUser {
   has_github?: boolean;
   has_google?: boolean;
   has_password?: boolean;
+  badges?: Badge[];
 }
 
 export interface AuthResponse {

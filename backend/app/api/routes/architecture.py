@@ -11,6 +11,7 @@ from app.models.session import (
     TokenUsage,
     UpdateMermaidRequest,
 )
+from app.services.badge_service import award_badges
 from app.services.session_store import save_session
 
 router = APIRouter()
@@ -61,4 +62,7 @@ async def architecture_submit(
         session.architecture.user_description = body.user_description
     session.status = "reviewing"
     await save_session(session)
-    return {"status": "ok"}
+    new_badges: list[dict[str, Any]] = []
+    if session.user_id:
+        new_badges = await award_badges(session.user_id, "architecture_submit")
+    return {"status": "ok", "new_badges": new_badges}

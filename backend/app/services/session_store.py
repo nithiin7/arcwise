@@ -1,6 +1,6 @@
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.db.engine import AsyncSessionLocal
 from app.db.models import SessionRecord
@@ -130,6 +130,19 @@ async def list_sessions(limit: int = 50, user_id: str | None = None) -> list[Ses
             q = q.where(SessionRecord.user_id == user_id)
         result = await db.execute(q)
         return [_record_to_session(r) for r in result.scalars()]
+
+
+async def count_submitted_sessions(user_id: str) -> int:
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(
+            select(func.count())
+            .select_from(SessionRecord)
+            .where(
+                SessionRecord.user_id == user_id,
+                SessionRecord.status.in_(["reviewing", "complete"]),
+            )
+        )
+        return result.scalar_one()
 
 
 async def update_session_tags(session_id: str, tags: list[str]) -> Session | None:

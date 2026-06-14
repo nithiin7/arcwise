@@ -1,9 +1,14 @@
-import type { Review } from "@/types";
+import type { BadgeAward, Review } from "@/types";
+
+export interface ReviewResult {
+  review: Review;
+  newBadges: BadgeAward[];
+}
 
 export async function streamReviewDesign(
   sessionId: string,
   onChunk: (text: string) => void,
-): Promise<Review> {
+): Promise<ReviewResult> {
   const apiBase = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api";
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (typeof window !== "undefined") {
@@ -39,11 +44,17 @@ export async function streamReviewDesign(
     for (const part of parts) {
       const dataLine = part.split("\n").find((l) => l.startsWith("data: "));
       if (!dataLine) continue;
-      const event = JSON.parse(dataLine.slice(6)) as { type: string; text?: string; review?: Review; message?: string };
+      const event = JSON.parse(dataLine.slice(6)) as {
+        type: string;
+        text?: string;
+        review?: Review;
+        new_badges?: BadgeAward[];
+        message?: string;
+      };
       if (event.type === "chunk" && event.text) {
         onChunk(event.text);
       } else if (event.type === "done" && event.review) {
-        return event.review;
+        return { review: event.review, newBadges: event.new_badges ?? [] };
       } else if (event.type === "error") {
         throw new Error(event.message ?? "Review failed");
       }

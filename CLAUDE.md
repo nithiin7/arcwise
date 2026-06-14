@@ -83,32 +83,58 @@ arcwise/
 ├── backend/               # Python 3.12 / FastAPI
 │   ├── alembic/           # DB migrations (alembic upgrade head to apply)
 │   └── app/
-│       ├── api/routes/    # Session, clarify, architecture, refine, review
-│       ├── agents/        # Claude-powered agents (clarification, suggester, refiner, reviewer)
+│       ├── api/routes/    # session, clarify, architecture, refine, review, auth, share, models
+│       ├── agents/        # LLM agents: clarification, suggester, refiner, reviewer
 │       ├── db/            # SQLAlchemy async engine, ORM models, declarative base
 │       ├── knowledge/     # Reference architectures + problem definitions
 │       ├── models/        # Pydantic request/response models
-│       ├── services/      # llm.py (LiteLLM), session_store.py (PostgreSQL via SQLAlchemy)
+│       ├── services/      # llm.py (LiteLLM), session_store.py, user_store.py, auth.py, email.py
 │       └── core/          # Config (Pydantic Settings), logging
 └── frontend/              # Next.js 16 App Router + TypeScript
     └── src/
-        ├── app/           # Pages: / → /session/[id]/clarify → design → review
-        ├── components/    # MermaidDiagram, RefinementChat
+        ├── app/           # Pages: / · dashboard · login · signup · forgot-password · reset-password
+        │                  #         session/[id]/clarify · session/[id]/design · share/[token]
+        │                  #         settings · auth/callback
+        ├── components/    # UI primitives + domain: ArchitectureCanvas, MermaidEditorModal,
+        │                  #   ReviewPanel, ShareModal, RefinementChat, ModelSelect, UserMenu, …
         ├── lib/api.ts     # Typed fetch client (NEXT_PUBLIC_API_URL)
-        ├── store/         # Zustand store (sessionStore.ts)
+        ├── store/         # Zustand stores (sessionStore.ts, authStore.ts)
         └── types/         # Shared TypeScript interfaces
 ```
 
-### Session Flow
+### API Routes
 
+**Sessions** (`/api/sessions`):
 ```
-GET  /sessions             → List all sessions (for home page history)
-POST /sessions             → Claude generates 5 clarifying questions
-POST /sessions/:id/clarify → User answers; session saved to DB
-POST /sessions/:id/architecture/suggest → Claude suggests Mermaid diagram
-POST /sessions/:id/architecture/submit  → Lock diagram, move to review
-POST /sessions/:id/refine  → Iterative diagram updates
-POST /sessions/:id/review  → Scored evaluation (5 dimensions, 1–10); review saved on session
+GET  /                           → List all sessions (dashboard)
+POST /                           → Create session; Claude generates clarifying questions
+POST /:id/clarify               → Submit answers; session saved to DB
+POST /:id/architecture/suggest  → Claude suggests Mermaid diagram
+POST /:id/architecture/submit   → Lock diagram, advance to review stage
+POST /:id/refine                → Iterative diagram updates via chat
+POST /:id/review                → Scored review (5 dimensions, 1–10); saved on session
+POST /:id/share                 → Generate a shareable public link (share_token)
+```
+
+**Auth** (`/api/auth`):
+```
+POST /register          → Email + password registration → JWT
+POST /login             → Email + password → JWT
+POST /forgot-password   → Send reset email (SMTP)
+POST /reset-password    → Consume reset token → new JWT
+GET  /github            → Redirect to GitHub OAuth
+GET  /github/callback   → Exchange GitHub code → JWT
+GET  /google            → Redirect to Google OAuth
+GET  /google/callback   → Exchange Google code → JWT
+GET  /me                → Current user (requires JWT)
+GET  /config            → Which OAuth providers are enabled
+```
+
+**Other**:
+```
+GET /api/share/:token        → Public read-only view of a shared session
+GET /api/models/ollama       → List locally running Ollama models
+GET /api/health              → Health check
 ```
 
 ### Running Locally
@@ -144,14 +170,15 @@ docker compose up
 
 ### Backend Guidelines
 
-- All AI calls go through `app/services/llm.py` — `complete()` for single-turn, `stream_complete()` for streaming, `extract_json()` for structured output.
-- Sessions are persisted to PostgreSQL via `app/services/session_store.py` (SQLAlchemy async + asyncpg). The store interface (`get_session`, `save_session`, `delete_session`, `list_sessions`) is the only way routes touch the DB — never import `AsyncSessionLocal` directly in routes.
+- All AI calls go through `app/services/llm.py` — `complete()` for single-turn, `stream_complete()` for streaming, `extract_json()` for structured output. Backed by LiteLLM so any provider key in `.env` is automatically available.
+- Sessions are persisted to PostgreSQL via `app/services/session_store.py` (SQLAlchemy async + asyncpg). The store interface (`get_session`, `save_session`, `delete_session`, `list_sessions`) is the only way routes touch session rows — never import `AsyncSessionLocal` directly in routes.
+- Users are persisted via `app/services/user_store.py`. Auth logic (JWT, password hashing, reset tokens) lives in `app/services/auth.py`. Email dispatch (reset-password links) is in `app/services/email.py`.
 - Schema changes go through Alembic migrations in `alembic/versions/`. Run `alembic upgrade head` to apply. The `create_all` in `main.py` is a dev convenience only.
 - Agents live in `app/agents/` and are single-responsibility (one LLM interaction per agent).
 - Use Pydantic models for all request/response shapes. Don't bypass them with raw dicts.
 - Ruff enforces linting; mypy enforces types. Run `ruff check` and `mypy` before declaring backend work done.
 - Environment config is centralized in `app/core/config.py` (Pydantic `Settings`). Don't hardcode values.
-- `DATABASE_URL` uses `postgresql+asyncpg://` scheme. Local dev connects to Docker Postgres on port 5433 (5432 is taken by the system Postgres).
+- `DATABASE_URL` uses `postgresql+asyncpg://` scheme. Docker Compose maps host port 5433 → container 5432; set `DATABASE_URL` in `.env` accordingly for local dev.
 
 ### Frontend Guidelines
 

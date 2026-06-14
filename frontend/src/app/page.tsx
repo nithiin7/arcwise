@@ -1,264 +1,509 @@
 "use client";
 
-import { useState, useRef, KeyboardEvent } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { motion } from "framer-motion";
-import * as api from "@/lib/api";
-import { useSessionStore } from "@/store/sessionStore";
-import type { Session } from "@/types";
+import LogoMark from "@/components/icons/LogoMark";
+import { FEATURES, featureContainerVariants, featureItemVariants } from "@/constants/home";
 
-const EXAMPLES = [
-  "Design WhatsApp",
-  "Design Twitter's feed",
-  "Design Netflix",
-  "Design Uber",
-  "Design YouTube",
-];
-
-function LogoMark() {
+export default function LandingPage() {
   return (
-    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect x="0" y="0" width="8" height="8" rx="2" fill="#6366f1" />
-      <rect x="10" y="0" width="8" height="8" rx="2" fill="#6366f1" opacity="0.7" />
-      <rect x="0" y="10" width="8" height="8" rx="2" fill="#6366f1" opacity="0.7" />
-      <rect x="10" y="10" width="8" height="8" rx="2" fill="#6366f1" opacity="0.4" />
-    </svg>
-  );
-}
-
-function Spinner() {
-  return (
-    <svg
-      className="animate-spin"
-      width="16"
-      height="16"
-      viewBox="0 0 16 16"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
+    <div
+      style={{
+        minHeight: "100vh",
+        background: "var(--color-bg)",
+        color: "var(--color-text)",
+        fontFamily: "Inter, sans-serif",
+      }}
     >
-      <circle cx="8" cy="8" r="6" stroke="currentColor" strokeOpacity="0.25" strokeWidth="2" />
-      <path
-        d="M14 8a6 6 0 0 0-6-6"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-export default function HomePage() {
-  const router = useRouter();
-  const setSession = useSessionStore((s) => s.setSession);
-  const [problem, setProblem] = useState("");
-  const [loading, setLoading] = useState(false);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  async function handleSubmit() {
-    const trimmed = problem.trim();
-    if (!trimmed || loading) return;
-    setLoading(true);
-    try {
-      const res = await api.createSession(trimmed);
-      const session: Session = {
-        id: res.session_id,
-        problem: res.problem,
-        clarifications: res.questions.map((q) => ({ question: q, answer: "" })),
-        architecture: {
-          llm_suggested_mermaid: "",
-          llm_explanation: "",
-          component_justifications: {},
-          scale_assumption: "",
-          revisions: [],
-          final_mermaid: "",
-        },
-        status: "clarifying",
-      };
-      setSession(session);
-      router.push(`/session/${res.session_id}/clarify`);
-    } catch (err) {
-      console.error(err);
-      setLoading(false);
-    }
-  }
-
-  function handleKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSubmit();
-    }
-  }
-
-  return (
-    <div className="relative flex flex-1 flex-col items-center justify-center min-h-screen px-4 overflow-hidden">
-      {/* Ambient glow */}
-      <div
-        aria-hidden
-        className="pointer-events-none fixed inset-0 flex items-center justify-center"
+      {/* Nav */}
+      <nav
+        style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 50,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "14px 28px",
+          backdropFilter: "blur(12px)",
+          WebkitBackdropFilter: "blur(12px)",
+          borderBottom: "1px solid var(--color-border)",
+          background: "rgba(var(--color-bg-raw, 250,250,250), 0.8)",
+        }}
       >
-        <div
-          style={{
-            width: 600,
-            height: 600,
-            borderRadius: "50%",
-            background: "radial-gradient(circle, rgba(99,102,241,0.12) 0%, transparent 70%)",
-            filter: "blur(40px)",
-          }}
-        />
-      </div>
-
-      <motion.div
-        className="relative z-10 flex flex-col items-center w-full max-w-2xl"
-        initial={{ opacity: 0, y: 24 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-      >
-        {/* Logo + name */}
-        <div className="flex items-center gap-2 mb-8">
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <LogoMark />
           <span
             style={{
-              fontSize: 13,
-              fontWeight: 600,
-              color: "var(--color-text-muted)",
-              letterSpacing: "0.05em",
-              textTransform: "uppercase",
+              fontSize: 14,
+              fontWeight: 700,
+              letterSpacing: "0.04em",
+              color: "var(--color-text)",
             }}
           >
             Arcwise
           </span>
         </div>
-
-        {/* Headline */}
-        <h1
+        <Link
+          href="/dashboard"
           style={{
-            fontSize: "clamp(2rem, 5vw, 2.75rem)",
-            fontWeight: 700,
-            lineHeight: 1.15,
-            textAlign: "center",
-            marginBottom: 12,
-            background: "linear-gradient(180deg, #f4f4f5 0%, rgba(244,244,245,0.55) 100%)",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
-            backgroundClip: "text",
+            padding: "7px 18px",
+            borderRadius: "var(--radius-sm)",
+            background: "var(--color-primary)",
+            color: "#fff",
+            fontSize: 13,
+            fontWeight: 500,
+            textDecoration: "none",
+            transition: "opacity 0.15s",
           }}
+          onMouseEnter={(e) => ((e.currentTarget as HTMLAnchorElement).style.opacity = "0.85")}
+          onMouseLeave={(e) => ((e.currentTarget as HTMLAnchorElement).style.opacity = "1")}
         >
-          What will you design today?
-        </h1>
+          Open App
+        </Link>
+      </nav>
 
-        {/* Sub-text */}
-        <p
-          style={{
-            color: "var(--color-text-muted)",
-            fontSize: 15,
-            textAlign: "center",
-            marginBottom: 32,
-            maxWidth: 440,
-            lineHeight: 1.6,
-          }}
-        >
-          Enter a system design problem. The AI will guide you through the architecture.
-        </p>
-
-        {/* Textarea card */}
+      {/* Hero */}
+      <section
+        style={{
+          minHeight: "100vh",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          textAlign: "center",
+          padding: "100px 24px 80px",
+          position: "relative",
+          overflow: "hidden",
+        }}
+      >
+        {/* Background glow */}
         <div
+          aria-hidden
           style={{
-            width: "100%",
-            position: "relative",
-            background: "var(--color-surface)",
-            border: "1px solid var(--color-border)",
-            borderRadius: "var(--radius-lg)",
-            padding: "14px 14px 48px 14px",
+            position: "absolute",
+            inset: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            pointerEvents: "none",
           }}
         >
-          <textarea
-            ref={textareaRef}
-            rows={3}
-            value={problem}
-            onChange={(e) => setProblem(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="e.g. Design a URL shortener like bit.ly…"
+          <div
             style={{
-              width: "100%",
-              background: "transparent",
-              border: "none",
-              outline: "none",
-              resize: "none",
-              color: "var(--color-text)",
-              fontSize: 15,
-              lineHeight: 1.6,
-              fontFamily: "inherit",
+              width: 700,
+              height: 700,
+              borderRadius: "50%",
+              background: "radial-gradient(circle, rgba(99,102,241,0.1) 0%, transparent 65%)",
+              filter: "blur(48px)",
             }}
           />
-
-          {/* Submit button */}
-          <button
-            onClick={handleSubmit}
-            disabled={!problem.trim() || loading}
-            style={{
-              position: "absolute",
-              bottom: 10,
-              right: 10,
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              padding: "7px 14px",
-              borderRadius: "var(--radius-sm)",
-              background: problem.trim() && !loading ? "var(--color-primary)" : "var(--color-surface-offset)",
-              color: problem.trim() && !loading ? "#fff" : "var(--color-text-faint)",
-              border: "none",
-              cursor: problem.trim() && !loading ? "pointer" : "not-allowed",
-              fontSize: 13,
-              fontWeight: 500,
-              fontFamily: "inherit",
-              transition: "background 0.15s",
-            }}
-          >
-            {loading ? (
-              <>
-                <Spinner />
-                <span>Thinking…</span>
-              </>
-            ) : (
-              <span>Submit ↵</span>
-            )}
-          </button>
         </div>
 
-        {/* Example pills */}
-        <div className="flex flex-wrap justify-center gap-2 mt-5">
-          {EXAMPLES.map((ex, i) => (
-            <motion.button
-              key={ex}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 + i * 0.05, duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-              onClick={() => setProblem(ex)}
+        <motion.div
+          initial={{ opacity: 0, y: 28 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+          style={{ position: "relative", zIndex: 10, maxWidth: 680 }}
+        >
+          {/* Badge */}
+          <div
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "5px 14px",
+              borderRadius: 999,
+              border: "1px solid rgba(99,102,241,0.35)",
+              background: "rgba(99,102,241,0.08)",
+              fontSize: 12,
+              fontWeight: 500,
+              color: "var(--color-primary)",
+              marginBottom: 28,
+              letterSpacing: "0.02em",
+            }}
+          >
+            <span
               style={{
-                padding: "6px 14px",
-                borderRadius: 999,
+                width: 6,
+                height: 6,
+                borderRadius: "50%",
+                background: "var(--color-primary)",
+                display: "inline-block",
+              }}
+            />
+            AI-powered system design platform
+          </div>
+
+          <h1
+            className="heading-gradient"
+            style={{
+              fontSize: "clamp(2.4rem, 6vw, 3.75rem)",
+              fontWeight: 700,
+              lineHeight: 1.1,
+              letterSpacing: "-0.02em",
+              marginBottom: 20,
+            }}
+          >
+            Design and evaluate
+            <br />
+            systems with AI
+          </h1>
+
+          <p
+            style={{
+              fontSize: "clamp(15px, 2.5vw, 17px)",
+              color: "var(--color-text-muted)",
+              lineHeight: 1.7,
+              marginBottom: 40,
+              maxWidth: 480,
+              margin: "0 auto 40px",
+            }}
+          >
+            Describe a system. Get clarifying questions, an architecture diagram,
+            iterative refinement, and an expert analysis — all in one flow.
+          </p>
+
+          <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
+            <Link
+              href="/dashboard"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "12px 28px",
+                borderRadius: "var(--radius-sm)",
+                background: "var(--color-primary)",
+                color: "#fff",
+                fontSize: 14,
+                fontWeight: 600,
+                textDecoration: "none",
+                transition: "opacity 0.15s, transform 0.15s",
+                letterSpacing: "0.01em",
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLAnchorElement).style.opacity = "0.88";
+                (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(-1px)";
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLAnchorElement).style.opacity = "1";
+                (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(0)";
+              }}
+            >
+              Start designing
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M5 12h14M12 5l7 7-7 7" />
+              </svg>
+            </Link>
+            <a
+              href="#features"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                padding: "12px 28px",
+                borderRadius: "var(--radius-sm)",
                 border: "1px solid var(--color-border)",
                 background: "var(--color-surface)",
                 color: "var(--color-text-muted)",
-                fontSize: 13,
-                fontFamily: "inherit",
-                cursor: "pointer",
+                fontSize: 14,
+                fontWeight: 500,
+                textDecoration: "none",
                 transition: "border-color 0.15s, color 0.15s",
               }}
               onMouseEnter={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--color-primary)";
-                (e.currentTarget as HTMLButtonElement).style.color = "var(--color-text)";
+                (e.currentTarget as HTMLAnchorElement).style.borderColor = "var(--color-primary)";
+                (e.currentTarget as HTMLAnchorElement).style.color = "var(--color-text)";
               }}
               onMouseLeave={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--color-border)";
-                (e.currentTarget as HTMLButtonElement).style.color = "var(--color-text-muted)";
+                (e.currentTarget as HTMLAnchorElement).style.borderColor = "var(--color-border)";
+                (e.currentTarget as HTMLAnchorElement).style.color = "var(--color-text-muted)";
               }}
             >
-              {ex}
-            </motion.button>
+              See features
+            </a>
+          </div>
+        </motion.div>
+
+        {/* Scroll indicator */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1.2, duration: 0.6 }}
+          style={{
+            position: "absolute",
+            bottom: 32,
+            left: "50%",
+            transform: "translateX(-50%)",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 6,
+            color: "var(--color-text-faint)",
+            fontSize: 11,
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+          }}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "bounce 2s infinite" }}>
+            <path d="M12 5v14M5 12l7 7 7-7" />
+          </svg>
+        </motion.div>
+      </section>
+
+      {/* Features */}
+      <section
+        id="features"
+        style={{
+          padding: "80px 24px 100px",
+          maxWidth: 960,
+          margin: "0 auto",
+        }}
+      >
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-60px" }}
+          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+          style={{ textAlign: "center", marginBottom: 56 }}
+        >
+          <p
+            style={{
+              fontSize: 11,
+              fontWeight: 600,
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              color: "var(--color-primary)",
+              marginBottom: 12,
+            }}
+          >
+            Everything you need
+          </p>
+          <h2
+            className="heading-gradient"
+            style={{
+              fontSize: "clamp(1.6rem, 4vw, 2.2rem)",
+              fontWeight: 700,
+              lineHeight: 1.2,
+              letterSpacing: "-0.02em",
+            }}
+          >
+            A full design loop, end to end
+          </h2>
+        </motion.div>
+
+        <motion.div
+          variants={featureContainerVariants}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, margin: "-40px" }}
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+            gap: 1,
+            border: "1px solid var(--color-border)",
+            borderRadius: "var(--radius-lg)",
+            overflow: "hidden",
+            background: "var(--color-border)",
+          }}
+        >
+          {FEATURES.map((f) => (
+            <motion.div
+              key={f.title}
+              variants={featureItemVariants}
+              style={{
+                background: "var(--color-surface)",
+                padding: "28px 28px",
+                display: "flex",
+                flexDirection: "column",
+                gap: 12,
+              }}
+            >
+              <div
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: "var(--radius-sm)",
+                  border: "1px solid var(--color-border)",
+                  background: "var(--color-surface-2)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "var(--color-primary)",
+                  flexShrink: 0,
+                }}
+              >
+                {f.icon}
+              </div>
+              <div>
+                <p
+                  style={{
+                    fontSize: 14,
+                    fontWeight: 600,
+                    color: "var(--color-text)",
+                    marginBottom: 6,
+                  }}
+                >
+                  {f.title}
+                </p>
+                <p
+                  style={{
+                    fontSize: 13,
+                    color: "var(--color-text-muted)",
+                    lineHeight: 1.6,
+                  }}
+                >
+                  {f.description}
+                </p>
+              </div>
+            </motion.div>
           ))}
+        </motion.div>
+      </section>
+
+      {/* CTA section */}
+      <section
+        style={{
+          padding: "0 24px 100px",
+          maxWidth: 960,
+          margin: "0 auto",
+        }}
+      >
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-40px" }}
+          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+          style={{
+            textAlign: "center",
+            padding: "60px 32px",
+            borderRadius: "var(--radius-xl)",
+            border: "1px solid var(--color-border)",
+            background: "var(--color-surface)",
+            position: "relative",
+            overflow: "hidden",
+          }}
+        >
+          <div
+            aria-hidden
+            style={{
+              position: "absolute",
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+              width: 500,
+              height: 300,
+              borderRadius: "50%",
+              background: "radial-gradient(circle, rgba(99,102,241,0.08) 0%, transparent 70%)",
+              filter: "blur(32px)",
+              pointerEvents: "none",
+            }}
+          />
+          <p
+            style={{
+              fontSize: 11,
+              fontWeight: 600,
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              color: "var(--color-primary)",
+              marginBottom: 16,
+            }}
+          >
+            Ready to start?
+          </p>
+          <h2
+            className="heading-gradient"
+            style={{
+              fontSize: "clamp(1.5rem, 4vw, 2rem)",
+              fontWeight: 700,
+              lineHeight: 1.2,
+              letterSpacing: "-0.02em",
+              marginBottom: 16,
+            }}
+          >
+            Design your first system now
+          </h2>
+          <p
+            style={{
+              fontSize: 14,
+              color: "var(--color-text-muted)",
+              marginBottom: 32,
+              maxWidth: 400,
+              margin: "0 auto 32px",
+            }}
+          >
+            Pick any system — URL shortener, payment processor, video platform, real-time messaging — and get a complete architecture with expert analysis.
+          </p>
+          <Link
+            href="/dashboard"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "12px 32px",
+              borderRadius: "var(--radius-sm)",
+              background: "var(--color-primary)",
+              color: "#fff",
+              fontSize: 14,
+              fontWeight: 600,
+              textDecoration: "none",
+              transition: "opacity 0.15s, transform 0.15s",
+            }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLAnchorElement).style.opacity = "0.88";
+              (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(-1px)";
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLAnchorElement).style.opacity = "1";
+              (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(0)";
+            }}
+          >
+            Go to dashboard
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M5 12h14M12 5l7 7-7 7" />
+            </svg>
+          </Link>
+        </motion.div>
+      </section>
+
+      {/* Footer */}
+      <footer
+        style={{
+          borderTop: "1px solid var(--color-border)",
+          padding: "20px 28px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: 12,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <LogoMark />
+          <span style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-muted)" }}>
+            Arcwise
+          </span>
         </div>
-      </motion.div>
+        <p style={{ fontSize: 12, color: "var(--color-text-faint)" }}>
+          AI system design platform
+        </p>
+        <Link
+          href="/settings"
+          style={{ fontSize: 12, color: "var(--color-text-faint)", textDecoration: "none" }}
+          onMouseEnter={(e) => ((e.currentTarget as HTMLAnchorElement).style.color = "var(--color-text-muted)")}
+          onMouseLeave={(e) => ((e.currentTarget as HTMLAnchorElement).style.color = "var(--color-text-faint)")}
+        >
+          Settings
+        </Link>
+      </footer>
+
+      <style>{`
+        @keyframes bounce {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(4px); }
+        }
+      `}</style>
     </div>
   );
 }

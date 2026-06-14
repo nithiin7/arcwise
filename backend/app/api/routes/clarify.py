@@ -1,3 +1,5 @@
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException
 
 from app.api.deps import get_session_or_404
@@ -12,7 +14,7 @@ async def clarify(
     session_id: str,
     body: AnswerClarificationRequest,
     session: Session = Depends(get_session_or_404),
-) -> dict:
+) -> dict[str, Any]:
     if len(body.answers) != len(session.clarifications):
         raise HTTPException(
             status_code=422,

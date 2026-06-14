@@ -1,6 +1,19 @@
+export interface AuthUser {
+  id: string;
+  email: string;
+  name: string | null;
+  avatar_url: string | null;
+}
+
+export interface AuthResponse {
+  access_token: string;
+  user: AuthUser;
+}
+
 export interface ClarificationQA {
   question: string;
   answer: string;
+  options?: string[];
 }
 
 export interface Revision {
@@ -47,14 +60,25 @@ export interface Review {
 
 export type SessionStatus = "clarifying" | "designing" | "reviewing" | "complete";
 
+export interface TokenUsage {
+  prompt_tokens: number;
+  completion_tokens: number;
+  total_tokens: number;
+  cost_usd: number;
+}
+
 export interface Session {
   id: string;
   problem: string;
+  model: string;
   user_scale?: string;
   clarifications: ClarificationQA[];
   architecture: Architecture;
   status: SessionStatus;
   review?: Review;
+  token_usage?: TokenUsage;
+  share_token?: string;
+  created_at?: string;
 }
 
 export interface ChatMessage {
@@ -63,3 +87,64 @@ export interface ChatMessage {
   diff_summary?: string;
   timestamp: Date;
 }
+
+export interface Provider {
+  label: string;
+  field: "anthropicKey" | "openaiKey" | "geminiKey" | "xaiKey" | "groqKey";
+  models: string;
+  docsUrl: string;
+  docsLabel: string;
+}
+
+export interface ModelOption {
+  value: string;
+  label: string;
+  size?: string;
+}
+
+export interface ModelGroup {
+  group: string;
+  options: ModelOption[];
+}
+
+export interface OllamaModel {
+  name: string;
+  paramSize: string;
+}
+
+export interface ModelSelectProps {
+  groups: ModelGroup[];
+  value: string;
+  onChange: (value: string) => void;
+  direction?: "up" | "down";
+}
+
+export interface ErrorViewProps {
+  title?: string;
+  message?: string;
+  reset?: () => void;
+  backHref?: string;
+  backLabel?: string;
+}
+
+export interface ArchitectureCanvasProps {
+  mermaid: string;
+  isLoading: boolean;
+  scaleAssumption?: string;
+  onEditCode?: () => void;
+  onExportJson?: () => void;
+}
+
+export interface ComponentJustificationsProps {
+  justifications: Record<string, string>;
+}
+
+export interface RevisionTimelineProps {
+  revisions: Revision[];
+  onRevert: (index: number) => void;
+  onView: (index: number) => void;
+  viewingIndex: number | null;
+  initialMermaid?: string;
+}
+
+export type RevisionEntry = { index: number; label: string; canRevert: boolean };

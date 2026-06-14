@@ -9,7 +9,7 @@
   <p>
     <img src="https://img.shields.io/badge/FastAPI-0.110-009688?style=flat-square&logo=fastapi&logoColor=white" alt="FastAPI" />
     <img src="https://img.shields.io/badge/Next.js-16-black?style=flat-square&logo=next.js&logoColor=white" alt="Next.js" />
-    <img src="https://img.shields.io/badge/Claude-Sonnet_3.5-6366f1?style=flat-square&logo=anthropic&logoColor=white" alt="Claude" />
+    <img src="https://img.shields.io/badge/LiteLLM-multi--model-6366f1?style=flat-square&logo=anthropic&logoColor=white" alt="LiteLLM" />
     <img src="https://img.shields.io/badge/Python-3.12-3776ab?style=flat-square&logo=python&logoColor=white" alt="Python" />
     <img src="https://img.shields.io/badge/TypeScript-5-3178c6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript" />
     <img src="https://img.shields.io/badge/license-MIT-22c55e?style=flat-square" alt="License" />
@@ -38,7 +38,7 @@ Drop any system design problem — or pick from curated examples like WhatsApp, 
 <td width="50%">
 
 ### 🤖 AI-Guided Clarification
-Claude asks the right questions first: traffic scale, consistency model, latency targets, and scope. Just like a real interview.
+The AI asks the right questions first: traffic scale, consistency model, latency targets, and scope. Just like a real interview.
 
 </td>
 </tr>
@@ -53,6 +53,34 @@ Your design renders as an interactive Mermaid diagram in real time. Refine it th
 
 ### 📊 Scored Feedback
 Get a structured review across five dimensions — functional coverage, NFR handling, component justification, tradeoff awareness, and an overall score.
+
+</td>
+</tr>
+<tr>
+<td width="50%">
+
+### 🔌 Bring Your Own Model
+Switch between Claude, GPT-4o, Gemini, Groq, and local Ollama models from the Settings page — no code changes required. Powered by LiteLLM.
+
+</td>
+<td width="50%">
+
+### 🔗 Session Sharing
+Generate a public read-only link for any session. Share your architecture with teammates, mentors, or on social — no account required to view.
+
+</td>
+</tr>
+<tr>
+<td width="50%">
+
+### 🔐 Auth Built In
+Email/password registration with secure JWT sessions. Optional GitHub and Google OAuth. Password reset via email. Toggle auth on/off for local dev.
+
+</td>
+<td width="50%">
+
+### 📜 Design History
+The dashboard shows all past sessions with their problem statements and scores. Pick up where you left off or revisit old designs.
 
 </td>
 </tr>
@@ -99,7 +127,7 @@ Get a structured review across five dimensions — functional coverage, NFR hand
 ### Option A — Docker (recommended)
 
 ```bash
-git clone https://github.com/your-org/arcwise.git
+git clone https://github.com/nithiin7/arcwise.git
 cd arcwise
 
 # Add your Anthropic API key
@@ -123,9 +151,10 @@ Open **http://localhost:3000** — you're ready.
 cd backend
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env          # add ANTHROPIC_API_KEY
+cp .env.example .env          # add ANTHROPIC_API_KEY (or any supported provider key)
 pre-commit install --hook-type pre-commit --hook-type commit-msg
-uvicorn app.main:app --reload  # → http://localhost:8000
+alembic upgrade head
+python -m uvicorn app.main:app --reload  # → http://localhost:8000
 ```
 
 **Frontend**
@@ -145,12 +174,13 @@ npm run dev                    # → http://localhost:3000
 
 | Layer | Technology |
 |---|---|
-| **AI** | [Anthropic Claude](https://anthropic.com) (claude-3-5-sonnet) via Anthropic SDK |
-| **Backend** | FastAPI · Pydantic v2 · SSE streaming · In-memory session store |
+| **AI** | LiteLLM — Claude, GPT-4o, Gemini, Groq, xAI, Ollama (swap via `.env`) |
+| **Backend** | FastAPI · Pydantic v2 · SSE streaming · PostgreSQL (SQLAlchemy async) |
+| **Auth** | JWT · bcrypt · GitHub OAuth · Google OAuth · SMTP password reset |
 | **Frontend** | Next.js 16 App Router · React 19 · TypeScript · Zustand |
 | **Diagrams** | [Mermaid.js](https://mermaid.js.org/) (live DSL rendering) |
-| **Styling** | Tailwind CSS 4 · Framer Motion · Custom dark theme |
-| **Infra** | Docker Compose · Optional Redis session store |
+| **Styling** | Tailwind CSS 4 · Framer Motion · Custom dark theme + light mode |
+| **Infra** | Docker Compose · PostgreSQL · Optional Redis session store |
 | **Quality** | Ruff · mypy · ESLint · Prettier · Conventional Commits |
 
 </div>
@@ -163,19 +193,22 @@ npm run dev                    # → http://localhost:3000
 arcwise/
 ├── backend/
 │   └── app/
-│       ├── api/routes/     # session · clarify · architecture · refine · review
+│       ├── api/routes/     # session · clarify · architecture · refine · review · auth · share · models
 │       ├── agents/         # clarification · suggester · refiner · reviewer
 │       ├── knowledge/      # reference architectures + problem library
 │       ├── models/         # Pydantic schemas
-│       ├── services/       # claude.py · session_store.py
+│       ├── services/       # llm.py · session_store.py · user_store.py · auth.py · email.py
 │       └── core/           # config · logging
 │
 └── frontend/
     └── src/
-        ├── app/            # / → clarify → design → review (App Router)
-        ├── components/     # MermaidDiagram · RefinementChat
+        ├── app/            # / · dashboard · login · signup · forgot-password · reset-password
+        │                   # session/[id]/clarify · session/[id]/design
+        │                   # share/[token] · settings · auth/callback
+        ├── components/     # ArchitectureCanvas · MermaidEditorModal · ReviewPanel
+        │                   # ShareModal · RefinementChat · ModelSelect · UserMenu · …
         ├── lib/api.ts      # typed fetch client
-        ├── store/          # Zustand session store
+        ├── store/          # Zustand stores (session + auth)
         └── types/          # shared TypeScript interfaces
 ```
 

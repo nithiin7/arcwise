@@ -1,8 +1,10 @@
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException
 
 from app.agents.refiner import refine_architecture
 from app.api.deps import get_session_or_404
-from app.models.session import RefineArchitectureRequest, Revision, Session
+from app.models.session import RefineArchitectureRequest, Revision, Session, TokenUsage
 from app.services.session_store import save_session
 
 router = APIRouter()
@@ -13,11 +15,13 @@ async def refine(
     session_id: str,
     body: RefineArchitectureRequest,
     session: Session = Depends(get_session_or_404),
-) -> dict:
+) -> dict[str, Any]:
     current_mermaid = (
         session.architecture.final_mermaid or session.architecture.llm_suggested_mermaid
     )
-    result = await refine_architecture(current_mermaid, body.message)
+    result, usage = await refine_architecture(
+        current_mermaid, body.message, model=session.model, api_key=session.api_key
+    )
     revision = Revision(
         user_message=body.message,
         updated_mermaid=result["updated_mermaid"],
@@ -25,6 +29,7 @@ async def refine(
     )
     session.architecture.revisions.append(revision)
     session.architecture.final_mermaid = result["updated_mermaid"]
+    session.token_usage = session.token_usage + TokenUsage.from_llm(usage)
     await save_session(session)
     return {
         "updated_mermaid": result["updated_mermaid"],
@@ -38,7 +43,7 @@ async def revert(
     session_id: str,
     revision_index: int,
     session: Session = Depends(get_session_or_404),
-) -> dict:
+) -> dict[str, Any]:
     revisions = session.architecture.revisions
     if revision_index == -1:
         session.architecture.revisions = []

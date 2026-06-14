@@ -1,8 +1,9 @@
 import json
 from difflib import SequenceMatcher
 from pathlib import Path
+from typing import Any
 
-_PROBLEMS: dict[str, dict] = {}
+_PROBLEMS: dict[str, dict[str, Any]] = {}
 
 def _load_problems() -> None:
     problems_dir = Path(__file__).parent / "problems"

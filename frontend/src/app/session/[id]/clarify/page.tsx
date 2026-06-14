@@ -1,118 +1,127 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import * as api from "@/lib/api";
-import { useSessionStore } from "@/store/sessionStore";
+import { useRouter, useParams } from "next/navigation";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
 
-function Spinner() {
-  return (
-    <svg
-      className="animate-spin"
-      width="16"
-      height="16"
-      viewBox="0 0 16 16"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <circle cx="8" cy="8" r="6" stroke="currentColor" strokeOpacity="0.25" strokeWidth="2" />
-      <path d="M14 8a6 6 0 0 0-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-    </svg>
-  );
-}
+import * as api from "@/api";
+import { clarifyStepSchema, type ClarifyStepForm } from "@/lib/schemas";
+import { useSessionStore } from "@/store/sessionStore";
+import { Button } from "@/components/ui/Button";
+import { Textarea } from "@/components/ui/Textarea";
+import Spinner from "@/components/icons/Spinner";
 
 export default function ClarifyPage() {
   const router = useRouter();
+  const params = useParams<{ id: string }>();
   const session = useSessionStore((s) => s.session);
   const setSession = useSessionStore((s) => s.setSession);
 
   const questions = session?.clarifications.map((c) => c.question) ?? [];
-  const totalSteps = questions.length + 1; // questions + scale step
+  const totalSteps = questions.length;
 
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<string[]>(() => Array(questions.length).fill(""));
-  const [userScale, setUserScale] = useState("");
-  const [loading, setLoading] = useState(false);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const scaleInputRef = useRef<HTMLInputElement>(null);
+  const [stepSelectedOptions, setStepSelectedOptions] = useState<string[][]>(() =>
+    Array(questions.length).fill(null).map(() => [])
+  );
+
+  const textareaFocusRef = useRef<HTMLTextAreaElement | null>(null);
+
+  const {
+    register,
+    getValues,
+    setValue,
+    reset: resetStep,
+    formState: { isValid: isStepValid },
+  } = useForm<ClarifyStepForm>({
+    resolver: zodResolver(clarifyStepSchema),
+    mode: "onChange",
+    defaultValues: { answer: "" },
+  });
+
+  const { ref: rhfRef, ...answerProps } = register("answer");
+
+  const answerRef = useCallback(
+    (el: HTMLTextAreaElement | null) => {
+      textareaFocusRef.current = el;
+      rhfRef(el);
+    },
+    [rhfRef]
+  );
 
   useEffect(() => {
-    if (!session) {
-      router.replace("/");
-    }
-  }, [session, router]);
+    if (session) return;
+    api.getSession(params.id).then(setSession).catch(() => router.replace("/"));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
-    if (step < questions.length) {
-      textareaRef.current?.focus();
-    } else {
-      scaleInputRef.current?.focus();
-    }
-  }, [step, questions.length]);
+    textareaFocusRef.current?.focus();
+  }, [step]);
 
-  if (!session) return null;
-
-  const isLastQuestion = step === questions.length - 1;
-  const isScaleStep = step === questions.length;
-  const currentAnswer = step < questions.length ? answers[step] : "";
-
-  function updateAnswer(value: string) {
-    setAnswers((prev) => {
-      const next = [...prev];
-      next[step] = value;
-      return next;
-    });
-  }
-
-  function handleBack() {
-    if (step > 0) setStep((s) => s - 1);
-  }
-
-  async function handleNext() {
-    if (isScaleStep) {
-      await handleFinalSubmit();
-      return;
-    }
-    if (!answers[step].trim()) return;
-    if (isLastQuestion) {
-      setStep((s) => s + 1);
-      return;
-    }
-    setStep((s) => s + 1);
-  }
-
-  async function handleFinalSubmit() {
-    if (loading) return;
-    setLoading(true);
-    try {
-      await api.submitClarifications(
-        session!.id,
-        answers,
-        userScale.trim() || undefined,
-      );
+  const submitMutation = useMutation({
+    mutationFn: (vars: { answers: string[] }) =>
+      api.submitClarifications(session!.id, vars.answers),
+    onSuccess: (_, vars) => {
       setSession({
         ...session!,
         clarifications: session!.clarifications.map((c, i) => ({
           question: c.question,
-          answer: answers[i] ?? "",
+          answer: vars.answers[i] ?? "",
         })),
-        user_scale: userScale.trim() || undefined,
         status: "designing",
       });
       router.push(`/session/${session!.id}/design`);
-    } catch (err) {
-      console.error(err);
-      setLoading(false);
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : "Something went wrong.");
+    },
+  });
+
+  if (!session) return null;
+
+  const isLastStep = step === questions.length - 1;
+
+  function handleBack() {
+    if (step === 0) return;
+    const val = getValues("answer");
+    setAnswers((prev) => {
+      const next = [...prev];
+      next[step] = val;
+      return next;
+    });
+    const prevStep = step - 1;
+    setStep(prevStep);
+    resetStep({ answer: answers[prevStep] || "" });
+    // stepSelectedOptions[prevStep] already holds the user's prior chip selections
+  }
+
+  function handleNext() {
+    if (!isStepValid) return;
+    const val = getValues("answer");
+    const nextAnswers = [...answers];
+    nextAnswers[step] = val;
+    if (isLastStep) {
+      submitMutation.mutate({ answers: nextAnswers });
+      return;
     }
+    const nextStep = step + 1;
+    setAnswers(nextAnswers);
+    setStep(nextStep);
+    resetStep({ answer: answers[nextStep] || "" });
   }
 
   const progressFill = ((step + 1) / totalSteps) * 100;
 
   return (
-    <div className="flex flex-col min-h-screen px-4 py-8" style={{ background: "var(--color-bg)" }}>
+    <div className="flex flex-col items-center min-h-screen px-4 pt-12 pb-8" style={{ background: "var(--color-bg)" }}>
       {/* Progress bar */}
-      <div className="w-full max-w-2xl mx-auto mb-10">
+      <div className="w-full max-w-2xl mb-10">
         <div
           style={{
             display: "flex",
@@ -124,7 +133,7 @@ export default function ClarifyPage() {
               key={i}
               style={{
                 flex: 1,
-                height: 3,
+                height: 4,
                 borderRadius: 999,
                 background: "var(--color-surface-offset)",
                 overflow: "hidden",
@@ -145,7 +154,7 @@ export default function ClarifyPage() {
         </div>
       </div>
 
-      <div className="flex flex-col flex-1 items-center justify-center w-full max-w-2xl mx-auto">
+      <div className="flex flex-col flex-1 items-center justify-center w-full max-w-2xl">
         {/* Problem label */}
         <div className="w-full mb-2">
           <span
@@ -162,227 +171,117 @@ export default function ClarifyPage() {
         </div>
 
         <AnimatePresence mode="wait">
-          {!isScaleStep ? (
-            <motion.div
-              key={step}
-              className="w-full"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-            >
-              {/* Question indicator */}
-              <div className="mb-3">
-                <span
-                  style={{
-                    fontSize: 13,
-                    fontWeight: 600,
-                    color: "var(--color-primary)",
-                  }}
-                >
-                  Question {step + 1} of {questions.length}
-                </span>
-              </div>
-
-              {/* Question text */}
-              <h2
+          <motion.div
+            key={step}
+            className="w-full"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+          >
+            {/* Question indicator */}
+            <div className="mb-3">
+              <span
                 style={{
-                  fontSize: "clamp(1.2rem, 3vw, 1.6rem)",
+                  fontSize: 13,
                   fontWeight: 600,
-                  color: "var(--color-text)",
-                  lineHeight: 1.3,
-                  marginBottom: 20,
+                  color: "var(--color-primary)",
                 }}
               >
-                {questions[step]}
-              </h2>
+                Question {step + 1} of {questions.length}
+              </span>
+            </div>
 
-              {/* Answer textarea */}
-              <textarea
-                ref={textareaRef}
-                rows={4}
-                value={answers[step]}
-                onChange={(e) => updateAnswer(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    handleNext();
-                  }
-                }}
-                placeholder="Your answer…"
-                style={{
-                  width: "100%",
-                  background: "var(--color-surface)",
-                  border: "1px solid var(--color-border)",
-                  borderRadius: "var(--radius-md)",
-                  padding: "12px 14px",
-                  color: "var(--color-text)",
-                  fontSize: 15,
-                  lineHeight: 1.6,
-                  fontFamily: "inherit",
-                  outline: "none",
-                  resize: "none",
-                  marginBottom: 16,
-                }}
-              />
-            </motion.div>
-          ) : (
-            <motion.div
-              key="scale"
-              className="w-full"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+            {/* Question text */}
+            <h2
+              style={{
+                fontSize: "clamp(1.2rem, 3vw, 1.6rem)",
+                fontWeight: 600,
+                color: "var(--color-text)",
+                lineHeight: 1.3,
+                marginBottom: 20,
+              }}
             >
-              <AnimatePresence>
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-                  style={{
-                    overflow: "hidden",
-                    background: "var(--color-surface)",
-                    border: "1px solid var(--color-border)",
-                    borderRadius: "var(--radius-lg)",
-                    padding: "20px 20px 24px",
-                    marginBottom: 16,
-                  }}
-                >
-                  <div className="flex items-center gap-2 mb-1">
-                    <span style={{ fontSize: 16 }}>📊</span>
-                    <span
-                      style={{
-                        fontSize: 15,
-                        fontWeight: 600,
-                        color: "var(--color-text)",
+              {questions[step]}
+            </h2>
+
+            {/* Option chips */}
+            {session.clarifications[step]?.options?.length ? (
+              <div className="flex flex-wrap gap-2 mb-3" style={{ marginBottom: 16 }}>
+                {session.clarifications[step].options!.map((opt, i) => {
+                  const selected = stepSelectedOptions[step]?.includes(opt) ?? false;
+                  return (
+                    <button
+                      key={i}
+                      onClick={() => {
+                        const current = stepSelectedOptions[step] ?? [];
+                        const next = selected
+                          ? current.filter((o) => o !== opt)
+                          : [...current, opt];
+                        const newStepOpts = [...stepSelectedOptions];
+                        newStepOpts[step] = next;
+                        setStepSelectedOptions(newStepOpts);
+                        setValue("answer", next.join(", "), { shouldValidate: true });
                       }}
-                    >
-                      Approximate scale
-                    </span>
-                    <span
                       style={{
-                        fontSize: 11,
-                        fontWeight: 500,
-                        color: "var(--color-text-faint)",
-                        background: "var(--color-surface-offset)",
-                        padding: "2px 8px",
+                        padding: "6px 14px",
                         borderRadius: 999,
-                        marginLeft: 4,
+                        border: `1px solid ${selected ? "var(--color-primary)" : "var(--color-border)"}`,
+                        background: selected ? "rgba(99,102,241,0.1)" : "var(--color-surface)",
+                        color: selected ? "var(--color-primary)" : "var(--color-text-muted)",
+                        fontSize: 13,
+                        fontFamily: "inherit",
+                        cursor: "pointer",
+                        transition: "all 0.15s",
                       }}
                     >
-                      optional
-                    </span>
-                  </div>
-                  <p
-                    style={{
-                      fontSize: 13,
-                      color: "var(--color-text-muted)",
-                      marginBottom: 14,
-                      lineHeight: 1.5,
-                    }}
-                  >
-                    Help the AI calibrate its architecture suggestions to your target scale.
-                  </p>
-                  <input
-                    ref={scaleInputRef}
-                    type="text"
-                    value={userScale}
-                    onChange={(e) => setUserScale(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        handleFinalSubmit();
-                      }
-                    }}
-                    placeholder="Daily Active Users…"
-                    style={{
-                      width: "100%",
-                      background: "var(--color-surface-2)",
-                      border: "1px solid var(--color-border)",
-                      borderRadius: "var(--radius-sm)",
-                      padding: "10px 12px",
-                      color: "var(--color-text)",
-                      fontSize: 14,
-                      fontFamily: "inherit",
-                      outline: "none",
-                    }}
-                  />
-                </motion.div>
-              </AnimatePresence>
-            </motion.div>
-          )}
+                      {opt}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null}
+
+            {/* Answer textarea */}
+            <Textarea
+              ref={answerRef}
+              {...answerProps}
+              rows={4}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleNext();
+                }
+              }}
+              placeholder="Your answer…"
+              style={{ marginBottom: 16 }}
+            />
+          </motion.div>
         </AnimatePresence>
 
         {/* Navigation buttons */}
         <div className="flex items-center justify-between w-full mt-2">
-          <button
-            onClick={handleBack}
-            disabled={step === 0}
-            style={{
-              padding: "9px 20px",
-              borderRadius: "var(--radius-sm)",
-              border: "1px solid var(--color-border)",
-              background: "transparent",
-              color: step === 0 ? "var(--color-text-faint)" : "var(--color-text-muted)",
-              fontSize: 14,
-              fontWeight: 500,
-              fontFamily: "inherit",
-              cursor: step === 0 ? "not-allowed" : "pointer",
-            }}
-          >
+          <Button variant="secondary" size="md" onClick={handleBack} disabled={step === 0}>
             ← Back
-          </button>
+          </Button>
 
-          {isScaleStep ? (
-            <button
-              onClick={handleFinalSubmit}
-              disabled={loading}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                padding: "9px 20px",
-                borderRadius: "var(--radius-sm)",
-                border: "none",
-                background: "var(--color-primary)",
-                color: "#fff",
-                fontSize: 14,
-                fontWeight: 600,
-                fontFamily: "inherit",
-                cursor: loading ? "not-allowed" : "pointer",
-                opacity: loading ? 0.7 : 1,
-              }}
-            >
-              {loading ? (
-                <>
-                  <Spinner />
-                  <span>Generating…</span>
-                </>
-              ) : (
-                <span>Generate Architecture →</span>
-              )}
-            </button>
-          ) : (
-            <button
-              onClick={handleNext}
-              disabled={!answers[step]?.trim()}
-              style={{
-                padding: "9px 20px",
-                borderRadius: "var(--radius-sm)",
-                border: "none",
-                background: answers[step]?.trim() ? "var(--color-primary)" : "var(--color-surface-offset)",
-                color: answers[step]?.trim() ? "#fff" : "var(--color-text-faint)",
-                fontSize: 14,
-                fontWeight: 600,
-                fontFamily: "inherit",
-                cursor: answers[step]?.trim() ? "pointer" : "not-allowed",
-              }}
-            >
-              {isLastQuestion ? "Next →" : "Next →"}
-            </button>
-          )}
+          <Button
+            size="md"
+            onClick={handleNext}
+            disabled={!isStepValid || submitMutation.isPending}
+            style={{ opacity: submitMutation.isPending ? 0.7 : 1 }}
+          >
+            {submitMutation.isPending ? (
+              <>
+                <Spinner />
+                <span>Generating…</span>
+              </>
+            ) : isLastStep ? (
+              "Generate Architecture →"
+            ) : (
+              "Next →"
+            )}
+          </Button>
         </div>
       </div>
     </div>

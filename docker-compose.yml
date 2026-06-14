@@ -1,10 +1,29 @@
 version: "3.9"
 services:
+  postgres:
+    image: postgres:16-alpine
+    ports: ["5433:5432"]
+    environment:
+      POSTGRES_USER: arcwise
+      POSTGRES_PASSWORD: arcwise
+      POSTGRES_DB: arcwise
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U arcwise"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   backend:
     build: ./backend
     ports: ["8000:8000"]
+    depends_on:
+      postgres:
+        condition: service_healthy
     environment:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - DATABASE_URL=postgresql+asyncpg://arcwise:arcwise@postgres:5432/arcwise
       - CORS_ORIGINS=["http://localhost:3000"]
     volumes:
       - ./backend:/app
@@ -24,3 +43,6 @@ services:
     image: redis:7-alpine
     ports: ["6379:6379"]
     profiles: ["redis"]
+
+volumes:
+  postgres_data:

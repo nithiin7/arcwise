@@ -4,14 +4,18 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import architecture, clarify, refine, review, session
+from app.api.routes import architecture, auth, clarify, models, refine, review, session, share
 from app.core.config import settings
 from app.core.logging import setup_logging
+from app.db.base import Base
+from app.db.engine import engine
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
     setup_logging()
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
     yield
 
 
@@ -25,11 +29,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(auth.router, prefix="/api/auth")
+app.include_router(models.router, prefix="/api/models")
 app.include_router(session.router, prefix="/api/sessions")
 app.include_router(clarify.router, prefix="/api/sessions")
 app.include_router(architecture.router, prefix="/api/sessions")
 app.include_router(refine.router, prefix="/api/sessions")
 app.include_router(review.router, prefix="/api/sessions")
+app.include_router(share.sessions_router, prefix="/api/sessions")
+app.include_router(share.public_router, prefix="/api/share")
 
 
 @app.get("/api/health")

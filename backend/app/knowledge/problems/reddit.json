@@ -1,0 +1,13 @@
+{
+  "keywords": "Reddit social news voting comments subreddits feed ranking upvotes",
+  "description": "Social news aggregator with community-driven voting and threaded comments",
+  "patterns": [
+    "Wilson score or Reddit's ranking formula for hot/top feeds",
+    "Cassandra for posts and votes (write-heavy, time-series access)",
+    "Redis sorted sets for hot feed per subreddit with TTL expiry",
+    "Fan-out-on-read for large subreddits to avoid write amplification",
+    "Nested comment tree stored with materialized path or adjacency list",
+    "Kafka for vote event aggregation and async score updates",
+    "CDN for static assets; image/video transcoding pipeline"
+  ]
+}

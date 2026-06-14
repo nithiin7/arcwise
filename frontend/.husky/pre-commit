@@ -1,2 +1,10 @@
 #!/bin/sh
 npx lint-staged
+
+# Backend lint
+cd "$(git rev-parse --show-toplevel)/backend"
+if [ -d ".venv" ]; then
+  .venv/bin/ruff check
+else
+  echo "Warning: backend/.venv not found, skipping ruff check"
+fi

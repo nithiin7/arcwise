@@ -1,0 +1,13 @@
+{
+  "keywords": "Dropbox file storage sync cloud backup sharing collaboration",
+  "description": "Cloud file storage and sync service with cross-device consistency",
+  "patterns": [
+    "Chunked upload with deduplication via content-hash (SHA-256)",
+    "S3 for block storage; metadata in MySQL/PostgreSQL",
+    "Delta sync — only changed blocks transferred",
+    "Long-polling or WebSocket for client sync notifications",
+    "Vector clocks or last-write-wins for conflict resolution",
+    "CDN edge caching for frequently accessed files",
+    "Background worker queue for thumbnail and preview generation"
+  ]
+}

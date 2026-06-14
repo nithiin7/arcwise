@@ -1,0 +1,13 @@
+{
+  "keywords": "Slack team messaging chat workspace channels real-time notifications",
+  "description": "Real-time team messaging platform with channels, DMs, and integrations",
+  "patterns": [
+    "WebSocket per-client connection for message delivery",
+    "Kafka for message fan-out across workspace members",
+    "PostgreSQL for message history with cursor-based pagination",
+    "Redis pub/sub for presence and typing indicators",
+    "Elasticsearch for full-text message search",
+    "S3 for file attachments with pre-signed URLs",
+    "Push notifications via APNs/FCM for offline users"
+  ]
+}

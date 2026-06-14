@@ -87,6 +87,8 @@ export default function DesignPage() {
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputFocusRef = useRef<HTMLInputElement | null>(null);
+  const descRef = useRef<HTMLDivElement>(null);
+  const [descHeight, setDescHeight] = useState<number | null>(null);
 
   const {
     register,
@@ -108,6 +110,23 @@ export default function DesignPage() {
     },
     [msgRefCallback]
   );
+
+  function handleDescDragStart(e: React.MouseEvent) {
+    const h = descRef.current?.getBoundingClientRect().height ?? 180;
+    const startY = e.clientY;
+    const startH = h;
+    const onMove = (ev: MouseEvent) => {
+      const delta = ev.clientY - startY;
+      setDescHeight(Math.max(60, Math.min(500, startH + delta)));
+    };
+    const onUp = () => {
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+    };
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+    e.preventDefault();
+  }
 
   useEffect(() => {
     if (session) {
@@ -713,9 +732,11 @@ export default function DesignPage() {
               {/* AI explanation + component justifications */}
               {arch.llm_explanation && (
                 <div
+                  ref={descRef}
                   style={{
                     borderBottom: "1px solid var(--color-border)",
                     flexShrink: 0,
+                    ...(descHeight !== null ? { height: descHeight, overflowY: "auto" as const } : {}),
                   }}
                 >
                   <div style={{ padding: "12px 16px 10px" }}>
@@ -828,6 +849,31 @@ export default function DesignPage() {
                       </AnimatePresence>
                     </>
                   )}
+                </div>
+              )}
+
+              {/* Drag handle between description and chat */}
+              {arch.llm_explanation && (
+                <div
+                  onMouseDown={handleDescDragStart}
+                  style={{
+                    height: 8,
+                    cursor: "ns-resize",
+                    flexShrink: 0,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    userSelect: "none",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 28,
+                      height: 3,
+                      borderRadius: 2,
+                      background: "var(--color-border)",
+                    }}
+                  />
                 </div>
               )}
 

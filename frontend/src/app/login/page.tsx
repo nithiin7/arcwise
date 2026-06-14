@@ -4,17 +4,13 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { AuthCard } from "@/components/auth/AuthCard";
+import { AuthDivider } from "@/components/auth/AuthDivider";
 import { OAuthButtons } from "@/components/auth/OAuthButtons";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { post } from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
-import type { AuthUser } from "@/store/authStore";
-
-interface LoginResponse {
-  access_token: string;
-  user: AuthUser;
-}
+import type { AuthResponse } from "@/types";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -33,7 +29,7 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
     try {
-      const data = await post<LoginResponse>("/auth/login", { email, password });
+      const data = await post<AuthResponse>("/auth/login", { email, password });
       setAuth(data.user, data.access_token);
       const next = searchParams.get("next") ?? "/dashboard";
       router.replace(next);
@@ -44,30 +40,11 @@ export default function LoginPage() {
     }
   }
 
-  const dividerStyle = {
-    display: "flex",
-    alignItems: "center",
-    gap: 12,
-    margin: "20px 0",
-    color: "var(--color-text-faint)",
-    fontSize: 12,
-  };
-
-  const lineStyle = {
-    flex: 1,
-    height: 1,
-    background: "var(--color-border)",
-  };
-
   return (
     <AuthCard title="Sign in to Arcwise">
       <OAuthButtons label="Sign in" />
 
-      <div style={dividerStyle}>
-        <div style={lineStyle} />
-        or continue with email
-        <div style={lineStyle} />
-      </div>
+      <AuthDivider />
 
       {oauthError && (
         <p style={{ fontSize: 13, color: "var(--color-error)", marginBottom: 14 }}>

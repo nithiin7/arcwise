@@ -1,3 +1,15 @@
+export interface AuthUser {
+  id: string;
+  email: string;
+  name: string | null;
+  avatar_url: string | null;
+}
+
+export interface AuthResponse {
+  access_token: string;
+  user: AuthUser;
+}
+
 export interface ClarificationQA {
   question: string;
   answer: string;

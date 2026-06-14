@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 import CodeMirror from "@uiw/react-codemirror";
 import { vscodeDark, vscodeLight } from "@uiw/codemirror-theme-vscode";
 import { ArchitectureCanvas } from "./ArchitectureCanvas";
@@ -29,14 +30,7 @@ export function MermaidEditorModal({ initialMermaid, onApply, onClose }: Mermaid
     };
   }, [code]);
 
-  // Close on Escape
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  useEscapeKey(onClose);
 
   async function handleApply() {
     setIsApplying(true);

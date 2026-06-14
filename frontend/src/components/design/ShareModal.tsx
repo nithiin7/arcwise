@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 
 interface ShareModalProps {
   shareUrl: string;
@@ -16,13 +17,7 @@ export function ShareModal({ shareUrl, onClose }: ShareModalProps) {
     inputRef.current?.select();
   }, []);
 
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  useEscapeKey(onClose);
 
   async function handleCopy() {
     await navigator.clipboard.writeText(shareUrl);

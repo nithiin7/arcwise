@@ -84,6 +84,7 @@ export default function DesignPage() {
     return review || s?.review ? "review" : "refine";
   });
   const [justificationsOpen, setJustificationsOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputFocusRef = useRef<HTMLInputElement | null>(null);
@@ -176,6 +177,26 @@ export default function DesignPage() {
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatMessages]);
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (helpOpen) {
+        if (e.key === "Escape") setHelpOpen(false);
+        return;
+      }
+      if (codeEditorOpen) return;
+      const isInput = (e.target as HTMLElement).tagName === "INPUT" ||
+                      (e.target as HTMLElement).tagName === "TEXTAREA";
+      if ((e.metaKey || e.ctrlKey) && e.key === "e") {
+        e.preventDefault();
+        setCodeEditorOpen((o) => !o);
+      } else if (e.key === "?" && !isInput) {
+        setHelpOpen(true);
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [codeEditorOpen, helpOpen]);
 
   const refineMutation = useMutation({
     mutationFn: (message: string) => api.refineArchitecture(sessionId, message),
@@ -284,6 +305,9 @@ export default function DesignPage() {
     setActiveTab("refine");
   }
 
+  const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
+  const mod = isMac ? "⌘" : "Ctrl";
+
   const hasReview = review !== null;
   const isReviewing = submitMutation.isPending || reviewMutation.isPending;
   const overallScore = review?.scores?.overall;
@@ -381,6 +405,14 @@ export default function DesignPage() {
             <span style={{ fontSize: 11, color: "var(--color-text-faint)" }}>/10</span>
           </div>
         )}
+
+        <Button
+          variant="secondary"
+          onClick={() => setHelpOpen(true)}
+          title="Keyboard shortcuts (?)"
+        >
+          ?
+        </Button>
 
         <Button
           variant="secondary"
@@ -976,7 +1008,7 @@ export default function DesignPage() {
                   {...msgRegister}
                   type="text"
                   onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
+                    if (e.key === "Enter" && (!e.shiftKey || e.metaKey || e.ctrlKey)) {
                       e.preventDefault();
                       rhfSubmit(handleSend)();
                     }
@@ -1089,6 +1121,110 @@ export default function DesignPage() {
       <AnimatePresence>
         {shareUrl && (
           <ShareModal shareUrl={shareUrl} onClose={() => setShareUrl(null)} />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {helpOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            onClick={() => setHelpOpen(false)}
+            style={{
+              position: "fixed",
+              inset: 0,
+              background: "rgba(0,0,0,0.6)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              zIndex: 100,
+            }}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 6 }}
+              transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                background: "var(--color-surface)",
+                border: "1px solid var(--color-border)",
+                borderRadius: "var(--radius-lg)",
+                padding: 24,
+                width: 360,
+                maxWidth: "calc(100vw - 32px)",
+                display: "flex",
+                flexDirection: "column",
+                gap: 16,
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <span style={{ fontSize: 15, fontWeight: 600, color: "var(--color-text)" }}>
+                  Keyboard shortcuts
+                </span>
+                <button
+                  onClick={() => setHelpOpen(false)}
+                  style={{
+                    background: "transparent",
+                    border: "none",
+                    cursor: "pointer",
+                    color: "var(--color-text-faint)",
+                    fontSize: 20,
+                    lineHeight: 1,
+                    padding: "0 2px",
+                    fontFamily: "inherit",
+                  }}
+                >
+                  ×
+                </button>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column" }}>
+                {([
+                  { keys: ["↩", `${mod} ↩`], label: "Send refinement" },
+                  { keys: [`${mod} E`], label: "Edit diagram code" },
+                  { keys: ["?"], label: "Show shortcuts" },
+                  { keys: ["Esc"], label: "Close modal" },
+                ] as { keys: string[]; label: string }[]).map(({ keys, label }, i, arr) => (
+                  <div
+                    key={label}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      padding: "9px 0",
+                      borderBottom: i < arr.length - 1 ? "1px solid var(--color-border)" : "none",
+                    }}
+                  >
+                    <span style={{ fontSize: 13, color: "var(--color-text-muted)" }}>{label}</span>
+                    <div style={{ display: "flex", gap: 4 }}>
+                      {keys.map((k) => (
+                        <kbd
+                          key={k}
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            padding: "2px 7px",
+                            fontSize: 12,
+                            fontFamily: "inherit",
+                            fontWeight: 500,
+                            background: "var(--color-bg)",
+                            border: "1px solid var(--color-border)",
+                            borderRadius: "var(--radius-sm)",
+                            color: "var(--color-text)",
+                            boxShadow: "0 1px 0 var(--color-border)",
+                          }}
+                        >
+                          {k}
+                        </kbd>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          </motion.div>
         )}
       </AnimatePresence>
 

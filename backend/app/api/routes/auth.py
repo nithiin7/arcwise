@@ -1,3 +1,4 @@
+import logging
 import secrets
 from datetime import datetime, timezone
 from urllib.parse import urlencode
@@ -5,9 +6,9 @@ from urllib.parse import urlencode
 import httpx
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Response
 from fastapi.responses import RedirectResponse
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, EmailStr
 
+from app.api.deps import get_current_user
 from app.core.config import settings
 from app.services.auth import (
     create_access_token,
@@ -17,6 +18,7 @@ from app.services.auth import (
 )
 from app.services.email import send_reset_password_email
 from app.services.user_store import (
+    User,
     create_user,
     get_user_by_email,
     get_user_by_github_id,
@@ -25,9 +27,9 @@ from app.services.user_store import (
     update_user,
 )
 
-router = APIRouter()
+logger = logging.getLogger(__name__)
 
-_bearer = HTTPBearer(auto_error=False)
+router = APIRouter()
 
 GITHUB_AUTH_URL = "https://github.com/login/oauth/authorize"
 GITHUB_TOKEN_URL = "https://github.com/login/oauth/access_token"
@@ -64,19 +66,7 @@ def _token_response(token: str, user_dict: dict[str, object]) -> dict[str, objec
 
 
 @router.get("/me")
-async def get_me(
-    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
-) -> dict[str, object]:
-    if credentials is None:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    from app.services.auth import decode_access_token
-    from app.services.user_store import get_user_by_id
-    payload = decode_access_token(credentials.credentials)
-    if payload is None:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
-    user = await get_user_by_id(payload["user_id"])
-    if user is None:
-        raise HTTPException(status_code=401, detail="User not found")
+async def get_me(user: User = Depends(get_current_user)) -> dict[str, object]:
     return user.to_dict()
 
 
@@ -175,35 +165,42 @@ async def github_callback(
     if oauth_state != state:
         raise HTTPException(status_code=400, detail="Invalid OAuth state")
 
-    async with httpx.AsyncClient() as client:
-        token_resp = await client.post(
-            GITHUB_TOKEN_URL,
-            data={
-                "client_id": settings.github_client_id,
-                "client_secret": settings.github_client_secret,
-                "code": code,
-            },
-            headers={"Accept": "application/json"},
-        )
-        token_data = token_resp.json()
-        access_token = token_data.get("access_token")
-        if not access_token:
-            return RedirectResponse(f"{settings.frontend_url}/login?error=oauth_failed")
-
-        headers = {"Authorization": f"Bearer {access_token}"}
-        user_resp = await client.get(GITHUB_USER_URL, headers=headers)
-        gh_user = user_resp.json()
-
-        # Get primary verified email if not public
-        email = gh_user.get("email")
-        if not email:
-            emails_resp = await client.get(GITHUB_EMAIL_URL, headers=headers)
-            emails = emails_resp.json()
-            primary = next(
-                (e["email"] for e in emails if e.get("primary") and e.get("verified")),
-                None,
+    try:
+        async with httpx.AsyncClient() as client:
+            token_resp = await client.post(
+                GITHUB_TOKEN_URL,
+                data={
+                    "client_id": settings.github_client_id,
+                    "client_secret": settings.github_client_secret,
+                    "code": code,
+                },
+                headers={"Accept": "application/json"},
             )
-            email = primary
+            token_resp.raise_for_status()
+            token_data = token_resp.json()
+            access_token = token_data.get("access_token")
+            if not access_token:
+                return RedirectResponse(f"{settings.frontend_url}/login?error=oauth_failed")
+
+            headers = {"Authorization": f"Bearer {access_token}"}
+            user_resp = await client.get(GITHUB_USER_URL, headers=headers)
+            user_resp.raise_for_status()
+            gh_user = user_resp.json()
+
+            # Get primary verified email if not public
+            email = gh_user.get("email")
+            if not email:
+                emails_resp = await client.get(GITHUB_EMAIL_URL, headers=headers)
+                emails_resp.raise_for_status()
+                emails = emails_resp.json()
+                primary = next(
+                    (e["email"] for e in emails if e.get("primary") and e.get("verified")),
+                    None,
+                )
+                email = primary
+    except httpx.HTTPStatusError as e:
+        logger.error("GitHub OAuth HTTP error: %s %s", e.response.status_code, e.response.text)
+        return RedirectResponse(f"{settings.frontend_url}/login?error=oauth_failed")
 
     if not email:
         return RedirectResponse(f"{settings.frontend_url}/login?error=no_email")
@@ -262,27 +259,33 @@ async def google_callback(
         raise HTTPException(status_code=400, detail="Invalid OAuth state")
 
     callback_url = f"{settings.frontend_url.replace('3000', '8000')}/api/auth/google/callback"
-    async with httpx.AsyncClient() as client:
-        token_resp = await client.post(
-            GOOGLE_TOKEN_URL,
-            data={
-                "client_id": settings.google_client_id,
-                "client_secret": settings.google_client_secret,
-                "code": code,
-                "grant_type": "authorization_code",
-                "redirect_uri": callback_url,
-            },
-        )
-        token_data = token_resp.json()
-        access_token = token_data.get("access_token")
-        if not access_token:
-            return RedirectResponse(f"{settings.frontend_url}/login?error=oauth_failed")
+    try:
+        async with httpx.AsyncClient() as client:
+            token_resp = await client.post(
+                GOOGLE_TOKEN_URL,
+                data={
+                    "client_id": settings.google_client_id,
+                    "client_secret": settings.google_client_secret,
+                    "code": code,
+                    "grant_type": "authorization_code",
+                    "redirect_uri": callback_url,
+                },
+            )
+            token_resp.raise_for_status()
+            token_data = token_resp.json()
+            access_token = token_data.get("access_token")
+            if not access_token:
+                return RedirectResponse(f"{settings.frontend_url}/login?error=oauth_failed")
 
-        user_resp = await client.get(
-            GOOGLE_USER_URL,
-            headers={"Authorization": f"Bearer {access_token}"},
-        )
-        g_user = user_resp.json()
+            user_resp = await client.get(
+                GOOGLE_USER_URL,
+                headers={"Authorization": f"Bearer {access_token}"},
+            )
+            user_resp.raise_for_status()
+            g_user = user_resp.json()
+    except httpx.HTTPStatusError as e:
+        logger.error("Google OAuth HTTP error: %s %s", e.response.status_code, e.response.text)
+        return RedirectResponse(f"{settings.frontend_url}/login?error=oauth_failed")
 
     google_id = g_user.get("sub")
     email = g_user.get("email")

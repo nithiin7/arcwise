@@ -29,12 +29,7 @@ async def refine(
     )
     session.architecture.revisions.append(revision)
     session.architecture.final_mermaid = result["updated_mermaid"]
-    session.token_usage = session.token_usage + TokenUsage(
-        prompt_tokens=usage.prompt_tokens,
-        completion_tokens=usage.completion_tokens,
-        total_tokens=usage.total_tokens,
-        cost_usd=usage.cost_usd,
-    )
+    session.token_usage = session.token_usage + TokenUsage.from_llm(usage)
     await save_session(session)
     return {
         "updated_mermaid": result["updated_mermaid"],

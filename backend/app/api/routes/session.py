@@ -82,12 +82,7 @@ async def create_session(
             ClarificationQA(question=q["question"], options=q.get("options", []))
             for q in questions_data
         ],
-        token_usage=TokenUsage(
-            prompt_tokens=usage.prompt_tokens,
-            completion_tokens=usage.completion_tokens,
-            total_tokens=usage.total_tokens,
-            cost_usd=usage.cost_usd,
-        ),
+        token_usage=TokenUsage.from_llm(usage),
     )
     await save_session(session, user_id=user.id if user else None)
     return {

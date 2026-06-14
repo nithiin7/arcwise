@@ -30,12 +30,7 @@ async def architecture_suggest(
     if not session.tags:
         raw_tags = result.get("tags", [])
         session.tags = [t.lower().strip() for t in raw_tags if isinstance(t, str)][:2]
-    session.token_usage = session.token_usage + TokenUsage(
-        prompt_tokens=usage.prompt_tokens,
-        completion_tokens=usage.completion_tokens,
-        total_tokens=usage.total_tokens,
-        cost_usd=usage.cost_usd,
-    )
+    session.token_usage = session.token_usage + TokenUsage.from_llm(usage)
     await save_session(session)
     return {
         "explanation": result.get("explanation", ""),

@@ -17,11 +17,11 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 def create_access_token(user_id: str, email: str) -> str:
     expire = datetime.now(timezone.utc) + timedelta(hours=settings.jwt_expire_hours)
-    return jwt.encode(
+    return str(jwt.encode(
         {"sub": user_id, "email": email, "exp": expire},
         settings.jwt_secret,
         algorithm=settings.jwt_algorithm,
-    )
+    ))
 
 
 def decode_access_token(token: str) -> dict[str, str] | None:

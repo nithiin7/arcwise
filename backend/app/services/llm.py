@@ -86,7 +86,7 @@ async def complete(
         **_extra_kwargs(model, json_mode),
     )
     content = response.choices[0].message.content
-    logger.warning("LLM raw content (first 300 chars): %r", (content or "")[:300])
+    logger.debug("LLM raw content (first 300 chars): %r", (content or "")[:300])
     if not isinstance(content, str):
         raise TypeError(f"Unexpected content type: {type(content).__name__}")
     usage = response.usage or {}

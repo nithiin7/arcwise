@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 
 from app.core.config import settings
 from app.models.review import Review
+from app.services.llm import LLMUsage
 
 
 class TokenUsage(BaseModel):
@@ -20,6 +21,15 @@ class TokenUsage(BaseModel):
             completion_tokens=self.completion_tokens + other.completion_tokens,
             total_tokens=self.total_tokens + other.total_tokens,
             cost_usd=self.cost_usd + other.cost_usd,
+        )
+
+    @classmethod
+    def from_llm(cls, usage: LLMUsage) -> "TokenUsage":
+        return cls(
+            prompt_tokens=usage.prompt_tokens,
+            completion_tokens=usage.completion_tokens,
+            total_tokens=usage.total_tokens,
+            cost_usd=usage.cost_usd,
         )
 
 

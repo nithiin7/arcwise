@@ -20,6 +20,7 @@ from app.services.email import send_reset_password_email
 from app.services.user_store import (
     User,
     create_user,
+    delete_user,
     get_user_by_email,
     get_user_by_github_id,
     get_user_by_google_id,
@@ -68,6 +69,46 @@ def _token_response(token: str, user_dict: dict[str, object]) -> dict[str, objec
 @router.get("/me")
 async def get_me(user: User = Depends(get_current_user)) -> dict[str, object]:
     return user.to_dict()
+
+
+class UpdateMeRequest(BaseModel):
+    name: str | None = None
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+
+@router.post("/me/password")
+async def change_password(
+    body: ChangePasswordRequest,
+    user: User = Depends(get_current_user),
+) -> dict[str, str]:
+    if user.hashed_password is None:
+        raise HTTPException(status_code=400, detail="Account has no password set")
+    if not verify_password(body.current_password, user.hashed_password):
+        raise HTTPException(status_code=400, detail="Current password is incorrect")
+    if len(body.new_password) < 8:
+        raise HTTPException(status_code=422, detail="Password must be at least 8 characters")
+    await update_user(user.id, hashed_password=hash_password(body.new_password))
+    return {"message": "Password updated"}
+
+
+@router.delete("/me", status_code=204)
+async def delete_me(user: User = Depends(get_current_user)) -> None:
+    await delete_user(user.id)
+
+
+@router.patch("/me")
+async def update_me(
+    body: UpdateMeRequest,
+    user: User = Depends(get_current_user),
+) -> dict[str, object]:
+    updated = await update_user(user.id, name=body.name if body.name is not None else user.name)
+    if updated is None:
+        raise HTTPException(status_code=500, detail="Failed to update profile")
+    return updated.to_dict()
 
 
 @router.get("/config")

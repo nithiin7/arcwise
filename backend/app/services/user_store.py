@@ -18,6 +18,7 @@ class User:
         self.google_id: str | None = record.google_id
         self.reset_token: str | None = record.reset_token
         self.reset_token_expires: datetime | None = record.reset_token_expires
+        self.created_at: datetime = record.created_at
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -25,6 +26,10 @@ class User:
             "email": self.email,
             "name": self.name,
             "avatar_url": self.avatar_url,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "has_github": self.github_id is not None,
+            "has_google": self.google_id is not None,
+            "has_password": self.hashed_password is not None,
         }
 
 
@@ -123,3 +128,11 @@ async def update_user(
         await db.commit()
         await db.refresh(record)
         return User(record)
+
+
+async def delete_user(user_id: str) -> None:
+    async with AsyncSessionLocal() as db:
+        record = await db.get(UserRecord, user_id)
+        if record:
+            await db.delete(record)
+            await db.commit()

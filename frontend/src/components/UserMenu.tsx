@@ -119,6 +119,27 @@ export function UserMenu() {
               </div>
             </div>
             <Link
+              href="/profile"
+              onClick={() => setOpen(false)}
+              style={{
+                display: "block",
+                padding: "7px 14px",
+                fontSize: 13,
+                color: "var(--color-text-muted)",
+                textDecoration: "none",
+                transition: "background 0.1s",
+              }}
+              onMouseEnter={(e) =>
+                ((e.currentTarget as HTMLAnchorElement).style.background =
+                  "var(--color-surface-2)")
+              }
+              onMouseLeave={(e) =>
+                ((e.currentTarget as HTMLAnchorElement).style.background = "transparent")
+              }
+            >
+              Profile
+            </Link>
+            <Link
               href="/settings"
               onClick={() => setOpen(false)}
               style={{

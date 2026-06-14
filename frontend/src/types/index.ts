@@ -3,6 +3,10 @@ export interface AuthUser {
   email: string;
   name: string | null;
   avatar_url: string | null;
+  created_at?: string | null;
+  has_github?: boolean;
+  has_google?: boolean;
+  has_password?: boolean;
 }
 
 export interface AuthResponse {

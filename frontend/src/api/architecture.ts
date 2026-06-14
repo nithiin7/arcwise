@@ -17,8 +17,15 @@ export interface RevertRevisionResponse {
   mermaid: string;
 }
 
-export function suggestArchitecture(sessionId: string, diagramDirection?: string): Promise<SuggestArchitectureResponse> {
-  return post(`/sessions/${sessionId}/architecture/suggest`, diagramDirection ? { diagram_direction: diagramDirection } : undefined);
+export function suggestArchitecture(
+  sessionId: string,
+  diagramDirection?: string,
+  templateId?: string,
+): Promise<SuggestArchitectureResponse> {
+  const body: Record<string, string> = {};
+  if (diagramDirection) body.diagram_direction = diagramDirection;
+  if (templateId) body.template_id = templateId;
+  return post(`/sessions/${sessionId}/architecture/suggest`, Object.keys(body).length ? body : undefined);
 }
 
 export function refineArchitecture(

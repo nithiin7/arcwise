@@ -90,6 +90,7 @@ class RefineArchitectureRequest(BaseModel):
 
 class SuggestArchitectureRequest(BaseModel):
     diagram_direction: str = "LR"
+    template_id: str | None = None
 
 
 class SubmitArchitectureRequest(BaseModel):

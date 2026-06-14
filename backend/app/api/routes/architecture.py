@@ -22,7 +22,7 @@ async def architecture_suggest(
     body: SuggestArchitectureRequest = SuggestArchitectureRequest(),
     session: Session = Depends(get_session_or_404),
 ) -> dict[str, Any]:
-    result, usage = await suggest_architecture(session, body.diagram_direction)
+    result, usage = await suggest_architecture(session, body.diagram_direction, body.template_id)
     session.architecture.llm_suggested_mermaid = result.get("mermaid_dsl", "")
     session.architecture.llm_explanation = result.get("explanation", "")
     session.architecture.component_justifications = result.get("component_justifications", {})

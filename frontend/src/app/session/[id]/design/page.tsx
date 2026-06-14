@@ -19,6 +19,7 @@ import type { Revision } from "@/types";
 import { ArchitectureCanvas } from "@/components/design/ArchitectureCanvas";
 import { HistoryArrow, HistoryPill } from "@/components/design/HistoryStrip";
 import { MermaidEditorModal } from "@/components/design/MermaidEditorModal";
+import { TemplatePicker } from "@/components/design/TemplatePicker";
 import { ReviewPanel } from "@/components/design/ReviewPanel";
 import { ShareModal } from "@/components/design/ShareModal";
 import { Button } from "@/components/ui/Button";
@@ -114,7 +115,8 @@ export default function DesignPage() {
 
 
   const suggestMutation = useMutation({
-    mutationFn: () => api.suggestArchitecture(sessionId, diagramDirection),
+    mutationFn: (variables?: { templateId?: string }) =>
+      api.suggestArchitecture(sessionId, diagramDirection, variables?.templateId),
     onSuccess: (result) => {
       setSession({
         ...session!,
@@ -139,9 +141,6 @@ export default function DesignPage() {
       if (session.review) {
         setReview(session.review);
       }
-      if (!session.architecture.llm_suggested_mermaid) {
-        suggestMutation.mutate();
-      }
       return;
     }
     // Session missing or stale (different ID) — fetch from server
@@ -150,9 +149,6 @@ export default function DesignPage() {
       if (s.review) {
         setReview(s.review);
         setActiveTab("review");
-      }
-      if (!s.architecture.llm_suggested_mermaid) {
-        suggestMutation.mutate();
       }
     }).catch(() => router.replace("/"));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -298,6 +294,16 @@ export default function DesignPage() {
   const justificationEntries = Object.entries(arch.component_justifications);
   const showHistoryStrip = arch.revisions.length > 0 || !!arch.llm_suggested_mermaid;
 
+  const showTemplatePicker =
+    !!session &&
+    session.id === sessionId &&
+    !session.architecture.llm_suggested_mermaid &&
+    !suggestMutation.isPending;
+
+  function handleTemplateSelect(templateId: string | undefined) {
+    suggestMutation.mutate(templateId ? { templateId } : undefined);
+  }
+
   return (
     <div
       style={{
@@ -306,6 +312,7 @@ export default function DesignPage() {
         height: "100vh",
         background: "var(--color-bg)",
         overflow: "hidden",
+        position: "relative",
       }}
     >
       {/* Header */}
@@ -1101,6 +1108,12 @@ export default function DesignPage() {
           </AnimatePresence>
         </div>
       </div>
+
+      <AnimatePresence>
+        {showTemplatePicker && (
+          <TemplatePicker onSelect={handleTemplateSelect} />
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {shareUrl && (

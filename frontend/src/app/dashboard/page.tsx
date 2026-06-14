@@ -11,6 +11,7 @@ import { toast } from "sonner";
 
 import ModelSelect from "@/components/ModelSelect";
 import SessionCard from "@/components/SessionCard";
+import { UserMenu } from "@/components/UserMenu";
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
 import GearIcon from "@/components/icons/GearIcon";
@@ -150,34 +151,43 @@ export default function HomePage() {
         />
       </div>
 
-      {/* Settings link */}
-      <Link
-        href="/settings"
+      {/* Top-right controls */}
+      <div
         style={{
           position: "fixed",
           top: 16,
           right: 20,
           display: "flex",
           alignItems: "center",
-          gap: 5,
-          color: "var(--color-text-faint)",
-          fontSize: 12,
-          textDecoration: "none",
-          padding: "5px 10px",
-          borderRadius: "var(--radius-sm)",
-          transition: "color 0.15s",
+          gap: 4,
           zIndex: 20,
         }}
-        onMouseEnter={(e) =>
-          ((e.currentTarget as HTMLAnchorElement).style.color = "var(--color-text-muted)")
-        }
-        onMouseLeave={(e) =>
-          ((e.currentTarget as HTMLAnchorElement).style.color = "var(--color-text-faint)")
-        }
       >
-        <GearIcon />
-        Settings
-      </Link>
+        <UserMenu />
+        <Link
+          href="/settings"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 5,
+            color: "var(--color-text-faint)",
+            fontSize: 12,
+            textDecoration: "none",
+            padding: "5px 10px",
+            borderRadius: "var(--radius-sm)",
+            transition: "color 0.15s",
+          }}
+          onMouseEnter={(e) =>
+            ((e.currentTarget as HTMLAnchorElement).style.color = "var(--color-text-muted)")
+          }
+          onMouseLeave={(e) =>
+            ((e.currentTarget as HTMLAnchorElement).style.color = "var(--color-text-faint)")
+          }
+        >
+          <GearIcon />
+          Settings
+        </Link>
+      </div>
 
       <motion.div
         className="relative z-10 flex w-full max-w-2xl flex-col items-center"

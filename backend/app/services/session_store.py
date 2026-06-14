@@ -66,13 +66,14 @@ async def get_session(session_id: str) -> Session | None:
         return _record_to_session(record) if record is not None else None
 
 
-async def save_session(session: Session) -> None:
+async def save_session(session: Session, user_id: str | None = None) -> None:
     async with AsyncSessionLocal() as db:
         existing = await db.get(SessionRecord, session.id)
         if existing is None:
             db.add(
                 SessionRecord(
                     id=session.id,
+                    user_id=user_id,
                     problem=session.problem,
                     model=session.model,
                     api_key=session.api_key,
@@ -121,11 +122,12 @@ async def get_session_by_share_token(token: str) -> Session | None:
         return _record_to_session(record) if record is not None else None
 
 
-async def list_sessions(limit: int = 50) -> list[Session]:
+async def list_sessions(limit: int = 50, user_id: str | None = None) -> list[Session]:
     async with AsyncSessionLocal() as db:
-        result = await db.execute(
-            select(SessionRecord).order_by(SessionRecord.created_at.desc()).limit(limit)
-        )
+        q = select(SessionRecord).order_by(SessionRecord.created_at.desc()).limit(limit)
+        if user_id is not None:
+            q = q.where(SessionRecord.user_id == user_id)
+        result = await db.execute(q)
         return [_record_to_session(r) for r in result.scalars()]
 
 

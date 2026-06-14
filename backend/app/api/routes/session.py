@@ -1,9 +1,10 @@
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from app.agents.clarification import generate_clarifications
+from app.api.deps import get_optional_user
 from app.models.session import ClarificationQA, CreateSessionRequest, Session, TokenUsage
 from app.services.session_store import (
     delete_session,
@@ -12,6 +13,7 @@ from app.services.session_store import (
     save_session,
     update_session_tags,
 )
+from app.services.user_store import User
 
 router = APIRouter()
 
@@ -21,8 +23,10 @@ class UpdateTagsRequest(BaseModel):
 
 
 @router.get("", include_in_schema=True)
-async def get_sessions() -> list[dict[str, Any]]:
-    sessions = await list_sessions()
+async def get_sessions(
+    user: User | None = Depends(get_optional_user),
+) -> list[dict[str, Any]]:
+    sessions = await list_sessions(user_id=user.id if user else None)
     return [
         {
             "id": s.id,
@@ -39,7 +43,11 @@ async def get_sessions() -> list[dict[str, Any]]:
 
 
 @router.patch("/{session_id}/tags")
-async def patch_session_tags(session_id: str, body: UpdateTagsRequest) -> dict[str, Any]:
+async def patch_session_tags(
+    session_id: str,
+    body: UpdateTagsRequest,
+    _user: User | None = Depends(get_optional_user),
+) -> dict[str, Any]:
     session = await update_session_tags(session_id, body.tags)
     if session is None:
         raise HTTPException(status_code=404, detail="Session not found")
@@ -47,7 +55,10 @@ async def patch_session_tags(session_id: str, body: UpdateTagsRequest) -> dict[s
 
 
 @router.get("/{session_id}")
-async def get_session_by_id(session_id: str) -> dict[str, Any]:
+async def get_session_by_id(
+    session_id: str,
+    _user: User | None = Depends(get_optional_user),
+) -> dict[str, Any]:
     session = await get_session(session_id)
     if session is None:
         raise HTTPException(status_code=404, detail="Session not found")
@@ -56,7 +67,10 @@ async def get_session_by_id(session_id: str) -> dict[str, Any]:
 
 
 @router.delete("/{session_id}", status_code=204)
-async def delete_session_by_id(session_id: str) -> None:
+async def delete_session_by_id(
+    session_id: str,
+    _user: User | None = Depends(get_optional_user),
+) -> None:
     session = await get_session(session_id)
     if session is None:
         raise HTTPException(status_code=404, detail="Session not found")
@@ -64,7 +78,10 @@ async def delete_session_by_id(session_id: str) -> None:
 
 
 @router.post("")
-async def create_session(body: CreateSessionRequest) -> dict[str, Any]:
+async def create_session(
+    body: CreateSessionRequest,
+    user: User | None = Depends(get_optional_user),
+) -> dict[str, Any]:
     questions_data, usage = await generate_clarifications(
         body.problem, model=body.model, api_key=body.api_key
     )
@@ -83,7 +100,7 @@ async def create_session(body: CreateSessionRequest) -> dict[str, Any]:
             cost_usd=usage.cost_usd,
         ),
     )
-    await save_session(session)
+    await save_session(session, user_id=user.id if user else None)
     return {
         "session_id": session.id,
         "problem": session.problem,

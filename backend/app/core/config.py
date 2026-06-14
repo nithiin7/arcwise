@@ -1,3 +1,5 @@
+import secrets
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -16,6 +18,26 @@ class Settings(BaseSettings):
     use_redis: bool = False
     cors_origins: list[str] = ["http://localhost:3000"]
     log_level: str = "WARNING"
+
+    # Auth
+    authentication_required: bool = True
+    jwt_secret: str = secrets.token_urlsafe(32)
+    jwt_algorithm: str = "HS256"
+    jwt_expire_hours: int = 24
+    frontend_url: str = "http://localhost:3000"
+
+    # OAuth
+    github_client_id: str | None = None
+    github_client_secret: str | None = None
+    google_client_id: str | None = None
+    google_client_secret: str | None = None
+
+    # SMTP (for reset password emails)
+    smtp_host: str | None = None
+    smtp_port: int = 587
+    smtp_user: str | None = None
+    smtp_password: str | None = None
+    smtp_from_email: str = "noreply@arcwise.app"
 
 
 settings = Settings()

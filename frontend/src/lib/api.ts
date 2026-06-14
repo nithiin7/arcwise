@@ -6,7 +6,38 @@ const client = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
+client.interceptors.request.use((config) => {
+  // Read token from localStorage (set by authStore)
+  if (typeof window !== "undefined") {
+    try {
+      const raw = localStorage.getItem("arcwise-auth");
+      const token = raw ? (JSON.parse(raw)?.state?.token as string | null) : null;
+      if (token) {
+        config.headers = config.headers ?? {};
+        config.headers["Authorization"] = `Bearer ${token}`;
+      }
+    } catch {
+      // ignore parse errors
+    }
+  }
+  return config;
+});
+
 client.interceptors.response.use(undefined, (err) => {
+  if (err.response?.status === 401 && typeof window !== "undefined") {
+    // Clear auth state and redirect to login
+    try {
+      localStorage.removeItem("arcwise-auth");
+      document.cookie = "arcwise_token=; path=/; max-age=0; SameSite=Lax";
+    } catch {
+      // ignore
+    }
+    const isAuthPage = window.location.pathname.startsWith("/login") ||
+      window.location.pathname.startsWith("/signup");
+    if (!isAuthPage) {
+      window.location.href = "/login";
+    }
+  }
   const detail = err.response?.data?.detail;
   return Promise.reject(
     new Error(typeof detail === "string" ? detail : (err.response?.statusText ?? err.message)),

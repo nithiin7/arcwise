@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import architecture, clarify, models, refine, review, session, share
+from app.api.routes import architecture, auth, clarify, models, refine, review, session, share
 from app.core.config import settings
 from app.core.logging import setup_logging
 from app.db.base import Base
@@ -29,6 +29,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(auth.router, prefix="/api/auth")
 app.include_router(models.router, prefix="/api/models")
 app.include_router(session.router, prefix="/api/sessions")
 app.include_router(clarify.router, prefix="/api/sessions")

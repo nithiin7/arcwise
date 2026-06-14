@@ -9,7 +9,7 @@ import Spinner from "@/components/icons/Spinner";
 import type { ArchitectureCanvasProps } from "@/types";
 
 const MIN_ZOOM = 0.1;
-const MAX_ZOOM = 4;
+const MAX_ZOOM = 10;
 const PADDING = 48;
 
 function clamp(value: number, min: number, max: number) {
@@ -77,21 +77,26 @@ export function ArchitectureCanvas({ mermaid: diagram, isLoading, onEditCode, on
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [diagram, resolvedTheme]);
 
-  // Fit diagram to container after each new render
+  // Fit diagram to container after each new render.
+  // Double-RAF: first frame lets React commit the SVG to the DOM, second
+  // frame fires after the browser has calculated layout so scrollWidth/Height
+  // are valid (single RAF fires too early on first render and reads 0).
   useEffect(() => {
     if (!svg) return;
     requestAnimationFrame(() => {
-      const container = canvasRef.current;
-      const svgEl = svgWrapperRef.current?.querySelector("svg");
-      if (!container || !svgEl) return;
-      const cw = container.clientWidth - PADDING * 2;
-      const ch = container.clientHeight - PADDING * 2;
-      const sw = svgEl.scrollWidth;
-      const sh = svgEl.scrollHeight;
-      if (sw > 0 && sh > 0) {
-        setZoom(clamp(Math.min(cw / sw, ch / sh), MIN_ZOOM, MAX_ZOOM));
-        setOffset({ x: 0, y: 0 });
-      }
+      requestAnimationFrame(() => {
+        const container = canvasRef.current;
+        const svgEl = svgWrapperRef.current?.querySelector("svg");
+        if (!container || !svgEl) return;
+        const cw = container.clientWidth - PADDING * 2;
+        const ch = container.clientHeight - PADDING * 2;
+        const sw = svgEl.scrollWidth;
+        const sh = svgEl.scrollHeight;
+        if (sw > 0 && sh > 0) {
+          setZoom(clamp(Math.min(cw / sw, ch / sh), MIN_ZOOM, MAX_ZOOM));
+          setOffset({ x: 0, y: 0 });
+        }
+      });
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [svgKey]);

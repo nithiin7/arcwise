@@ -14,7 +14,6 @@ import SessionCard from "@/components/SessionCard";
 import { UserMenu } from "@/components/UserMenu";
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
-import GearIcon from "@/components/icons/GearIcon";
 import LogoMark from "@/components/icons/LogoMark";
 import Spinner from "@/components/icons/Spinner";
 import { EXAMPLES, MODEL_GROUPS } from "@/constants/dashboard";
@@ -164,29 +163,6 @@ export default function HomePage() {
         }}
       >
         <UserMenu />
-        <Link
-          href="/settings"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 5,
-            color: "var(--color-text-faint)",
-            fontSize: 12,
-            textDecoration: "none",
-            padding: "5px 10px",
-            borderRadius: "var(--radius-sm)",
-            transition: "color 0.15s",
-          }}
-          onMouseEnter={(e) =>
-            ((e.currentTarget as HTMLAnchorElement).style.color = "var(--color-text-muted)")
-          }
-          onMouseLeave={(e) =>
-            ((e.currentTarget as HTMLAnchorElement).style.color = "var(--color-text-faint)")
-          }
-        >
-          <GearIcon />
-          Settings
-        </Link>
       </div>
 
       <motion.div

@@ -1,5 +1,7 @@
 "use client";
 
+import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { useAuthStore } from "@/store/authStore";
@@ -53,10 +55,12 @@ export function UserMenu() {
         }
       >
         {user.avatar_url ? (
-          <img
+          <Image
             src={user.avatar_url}
             alt={user.name ?? user.email}
-            style={{ width: 22, height: 22, borderRadius: "50%", objectFit: "cover" }}
+            width={22}
+            height={22}
+            style={{ borderRadius: "50%", objectFit: "cover" }}
           />
         ) : (
           <div
@@ -114,6 +118,27 @@ export function UserMenu() {
                 {user.email}
               </div>
             </div>
+            <Link
+              href="/settings"
+              onClick={() => setOpen(false)}
+              style={{
+                display: "block",
+                padding: "7px 14px",
+                fontSize: 13,
+                color: "var(--color-text-muted)",
+                textDecoration: "none",
+                transition: "background 0.1s",
+              }}
+              onMouseEnter={(e) =>
+                ((e.currentTarget as HTMLAnchorElement).style.background =
+                  "var(--color-surface-2)")
+              }
+              onMouseLeave={(e) =>
+                ((e.currentTarget as HTMLAnchorElement).style.background = "transparent")
+              }
+            >
+              Settings
+            </Link>
             <button
               onClick={handleLogout}
               style={{

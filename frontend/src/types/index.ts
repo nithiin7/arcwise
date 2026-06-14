@@ -28,6 +28,18 @@ export interface AuthResponse {
   user: AuthUser;
 }
 
+export type AnnotationColor = "yellow" | "blue" | "green" | "pink";
+
+export interface Annotation {
+  id: string;
+  x: number;
+  y: number;
+  text: string;
+  doc_url?: string;
+  owner?: string;
+  color: AnnotationColor;
+}
+
 export interface ClarificationQA {
   question: string;
   answer: string;
@@ -49,6 +61,7 @@ export interface Architecture {
   revisions: Revision[];
   final_mermaid: string;
   user_description?: string;
+  annotations?: Annotation[];
 }
 
 export interface Scores {
@@ -151,6 +164,8 @@ export interface ArchitectureCanvasProps {
   scaleAssumption?: string;
   onEditCode?: () => void;
   onExportJson?: () => void;
+  annotations?: Annotation[];
+  onAnnotationsChange?: (annotations: Annotation[]) => void;
 }
 
 export interface ComponentJustificationsProps {

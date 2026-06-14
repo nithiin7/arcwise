@@ -46,6 +46,16 @@ class Revision(BaseModel):
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
+class Annotation(BaseModel):
+    id: str
+    x: float
+    y: float
+    text: str = ""
+    doc_url: str | None = None
+    owner: str | None = None
+    color: str = "yellow"
+
+
 class Architecture(BaseModel):
     llm_suggested_mermaid: str = ""
     llm_explanation: str = ""
@@ -54,6 +64,7 @@ class Architecture(BaseModel):
     revisions: list[Revision] = Field(default_factory=list)
     final_mermaid: str = ""
     user_description: str | None = None
+    annotations: list[Annotation] = Field(default_factory=list)
 
 
 class Session(BaseModel):

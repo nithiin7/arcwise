@@ -15,7 +15,7 @@ import { chatMessageSchema, type ChatMessageForm } from "@/lib/schemas";
 import { useSessionStore } from "@/store/sessionStore";
 import { useSettingsStore } from "@/store/settingsStore";
 import { scoreColor } from "@/lib/utils";
-import type { Revision } from "@/types";
+import type { Annotation, Revision } from "@/types";
 import { ArchitectureCanvas } from "@/components/design/ArchitectureCanvas";
 import { HistoryArrow, HistoryPill } from "@/components/design/HistoryStrip";
 import { MermaidEditorModal } from "@/components/design/MermaidEditorModal";
@@ -90,6 +90,7 @@ export default function DesignPage() {
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputFocusRef = useRef<HTMLInputElement | null>(null);
+  const annotationSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { ref: descRef, height: descHeight, onDragStart: handleDescDragStart } = useDragResize();
 
   const {
@@ -284,6 +285,18 @@ export default function DesignPage() {
 
   function handleView(index: number) {
     setPreviewIndex((prev) => (prev === index ? null : index));
+  }
+
+  function handleAnnotationsChange(annotations: Annotation[]) {
+    const latest = useSessionStore.getState().session;
+    if (!latest) return;
+    setSession({ ...latest, architecture: { ...latest.architecture, annotations } });
+    if (annotationSaveTimer.current) clearTimeout(annotationSaveTimer.current);
+    annotationSaveTimer.current = setTimeout(() => {
+      api.updateAnnotations(sessionId, annotations).catch(() =>
+        toast.error("Failed to save annotations.")
+      );
+    }, 600);
   }
 
   function handleSend(data: ChatMessageForm) {
@@ -578,6 +591,8 @@ export default function DesignPage() {
                 isLoading={suggestMutation.isPending}
                 scaleAssumption={arch.scale_assumption}
                 onEditCode={() => setCodeEditorOpen(true)}
+                annotations={arch.annotations}
+                onAnnotationsChange={handleAnnotationsChange}
                 onExportJson={() => {
                   const data = {
                     problem: session.problem,

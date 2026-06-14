@@ -1,5 +1,5 @@
-import { del, get, patch, post } from "@/lib/api";
-import type { BadgeAward, Session, TokenUsage } from "@/types";
+import { del, get, patch, post, put } from "@/lib/api";
+import type { Annotation, BadgeAward, Session, TokenUsage } from "@/types";
 
 export interface CreateSessionResponse {
   session_id: string;
@@ -62,4 +62,11 @@ export function createShareLink(
 
 export function getSharedSession(token: string): Promise<Session> {
   return get(`/share/${token}`);
+}
+
+export function updateAnnotations(
+  sessionId: string,
+  annotations: Annotation[],
+): Promise<{ ok: boolean }> {
+  return put(`/sessions/${sessionId}/annotations`, { annotations });
 }

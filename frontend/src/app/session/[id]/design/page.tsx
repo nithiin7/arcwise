@@ -254,6 +254,17 @@ export default function DesignPage() {
     resetChat();
   }
 
+  function handleApplyImprovements() {
+    if (!review || review.improvements.length === 0) return;
+    const lines = review.improvements.map(
+      (imp, i) => `${i + 1}. [${imp.priority.toUpperCase()}] ${imp.gap} → ${imp.fix}`,
+    );
+    const message = `Apply these improvements from the review:\n${lines.join("\n")}`;
+    addChatMessage({ role: "user", content: message, timestamp: new Date() });
+    refineMutation.mutate(message);
+    setActiveTab("refine");
+  }
+
   const hasReview = review !== null;
   const isReviewing = submitMutation.isPending || reviewMutation.isPending;
   const overallScore = review?.scores?.overall;
@@ -1016,7 +1027,11 @@ export default function DesignPage() {
                       )}
                     </div>
                   )}
-                  <ReviewPanel review={review} />
+                  <ReviewPanel
+                    review={review}
+                    onApplyImprovements={handleApplyImprovements}
+                    isApplying={refineMutation.isPending}
+                  />
                 </>
               ) : null}
             </motion.div>

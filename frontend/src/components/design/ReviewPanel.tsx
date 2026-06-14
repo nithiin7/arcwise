@@ -3,10 +3,17 @@
 import { motion } from "framer-motion";
 import { scoreColor } from "@/lib/utils";
 import type { Review } from "@/types";
+import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { SCORE_KEYS, PRIORITY_COLORS } from "@/constants/review";
 
-export function ReviewPanel({ review }: { review: Review }) {
+interface ReviewPanelProps {
+  review: Review;
+  onApplyImprovements?: () => void;
+  isApplying?: boolean;
+}
+
+export function ReviewPanel({ review, onApplyImprovements, isApplying }: ReviewPanelProps) {
   const { scores, feedback, strengths, gaps, improvements, reference_architecture_note } = review;
 
   return (
@@ -249,6 +256,15 @@ export function ReviewPanel({ review }: { review: Review }) {
               );
             })}
           </motion.div>
+          {onApplyImprovements && (
+            <Button
+              onClick={onApplyImprovements}
+              disabled={isApplying}
+              style={{ width: "100%", marginTop: 4 }}
+            >
+              {isApplying ? "Applying…" : "Apply All Improvements"}
+            </Button>
+          )}
         </div>
       )}
 

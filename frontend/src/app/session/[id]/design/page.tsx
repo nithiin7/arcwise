@@ -129,23 +129,6 @@ export default function DesignPage() {
     e.preventDefault();
   }
 
-  useEffect(() => {
-    if (session) {
-      if (session.review) {
-        setReview(session.review);
-      }
-      return;
-    }
-    api.getSession(sessionId).then((s) => {
-      setSession(s);
-      if (s.review) {
-        setReview(s.review);
-        setActiveTab("review");
-      }
-    }).catch(() => router.replace("/"));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   const suggestMutation = useMutation({
     mutationFn: () => api.suggestArchitecture(sessionId, diagramDirection),
     onSuccess: (result) => {
@@ -168,9 +151,26 @@ export default function DesignPage() {
   });
 
   useEffect(() => {
-    if (!session) return;
-    if (session.architecture.llm_suggested_mermaid) return;
-    suggestMutation.mutate();
+    if (session && session.id === sessionId) {
+      if (session.review) {
+        setReview(session.review);
+      }
+      if (!session.architecture.llm_suggested_mermaid) {
+        suggestMutation.mutate();
+      }
+      return;
+    }
+    // Session missing or stale (different ID) — fetch from server
+    api.getSession(sessionId).then((s) => {
+      setSession(s);
+      if (s.review) {
+        setReview(s.review);
+        setActiveTab("review");
+      }
+      if (!s.architecture.llm_suggested_mermaid) {
+        suggestMutation.mutate();
+      }
+    }).catch(() => router.replace("/"));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -258,7 +258,7 @@ export default function DesignPage() {
     },
   });
 
-  if (!session) return null;
+  if (!session || session.id !== sessionId) return null;
 
   const arch = session.architecture;
   const currentMermaid = arch.final_mermaid || arch.llm_suggested_mermaid || "";

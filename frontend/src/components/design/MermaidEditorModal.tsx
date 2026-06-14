@@ -1,7 +1,8 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
+import { useDebounce } from "@/hooks/useDebounce";
 import { useEscapeKey } from "@/hooks/useEscapeKey";
 import CodeMirror from "@uiw/react-codemirror";
 import { vscodeDark, vscodeLight } from "@uiw/codemirror-theme-vscode";
@@ -17,18 +18,9 @@ interface MermaidEditorModalProps {
 
 export function MermaidEditorModal({ initialMermaid, onApply, onClose }: MermaidEditorModalProps) {
   const [code, setCode] = useState(initialMermaid);
-  const [previewCode, setPreviewCode] = useState(initialMermaid);
+  const previewCode = useDebounce(code, 400);
   const [isApplying, setIsApplying] = useState(false);
   const resolvedTheme = useSettingsStore((s) => s.resolvedTheme);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => setPreviewCode(code), 400);
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
-  }, [code]);
 
   useEscapeKey(onClose);
 

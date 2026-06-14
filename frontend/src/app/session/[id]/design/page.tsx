@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useDragResize } from "@/hooks/useDragResize";
 import { useRouter } from "next/navigation";
 import { useParams } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -88,8 +89,7 @@ export default function DesignPage() {
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputFocusRef = useRef<HTMLInputElement | null>(null);
-  const descRef = useRef<HTMLDivElement>(null);
-  const [descHeight, setDescHeight] = useState<number | null>(null);
+  const { ref: descRef, height: descHeight, onDragStart: handleDescDragStart } = useDragResize();
 
   const {
     register,
@@ -112,22 +112,6 @@ export default function DesignPage() {
     [msgRefCallback]
   );
 
-  function handleDescDragStart(e: React.MouseEvent) {
-    const h = descRef.current?.getBoundingClientRect().height ?? 180;
-    const startY = e.clientY;
-    const startH = h;
-    const onMove = (ev: MouseEvent) => {
-      const delta = ev.clientY - startY;
-      setDescHeight(Math.max(60, Math.min(500, startH + delta)));
-    };
-    const onUp = () => {
-      document.removeEventListener("mousemove", onMove);
-      document.removeEventListener("mouseup", onUp);
-    };
-    document.addEventListener("mousemove", onMove);
-    document.addEventListener("mouseup", onUp);
-    e.preventDefault();
-  }
 
   const suggestMutation = useMutation({
     mutationFn: () => api.suggestArchitecture(sessionId, diagramDirection),

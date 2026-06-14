@@ -1,3 +1,5 @@
+import type React from "react";
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api";
 
 function GithubIcon() {
@@ -31,52 +33,32 @@ function GoogleIcon() {
   );
 }
 
+const oauthLinkStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: 10,
+  padding: "9px 16px",
+  borderRadius: "var(--radius-sm)",
+  border: "1px solid var(--color-border)",
+  background: "transparent",
+  color: "var(--color-text)",
+  fontSize: 13,
+  fontWeight: 500,
+  textDecoration: "none",
+  cursor: "pointer",
+  fontFamily: "inherit",
+  transition: "background 0.15s",
+};
+
 export function OAuthButtons({ label }: { label: "Sign in" | "Sign up" }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      <a
-        href={`${API_URL}/auth/github`}
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 10,
-          padding: "9px 16px",
-          borderRadius: "var(--radius-sm)",
-          border: "1px solid var(--color-border)",
-          background: "transparent",
-          color: "var(--color-text)",
-          fontSize: 13,
-          fontWeight: 500,
-          textDecoration: "none",
-          cursor: "pointer",
-          fontFamily: "inherit",
-          transition: "background 0.15s",
-        }}
-      >
+      <a href={`${API_URL}/auth/github`} style={oauthLinkStyle}>
         <GithubIcon />
         {label} with GitHub
       </a>
-      <a
-        href={`${API_URL}/auth/google`}
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 10,
-          padding: "9px 16px",
-          borderRadius: "var(--radius-sm)",
-          border: "1px solid var(--color-border)",
-          background: "transparent",
-          color: "var(--color-text)",
-          fontSize: 13,
-          fontWeight: 500,
-          textDecoration: "none",
-          cursor: "pointer",
-          fontFamily: "inherit",
-          transition: "background 0.15s",
-        }}
-      >
+      <a href={`${API_URL}/auth/google`} style={oauthLinkStyle}>
         <GoogleIcon />
         {label} with Google
       </a>

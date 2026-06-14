@@ -4,8 +4,6 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import type { AuthUser } from "@/types";
 
-export type { AuthUser };
-
 interface AuthState {
   user: AuthUser | null;
   token: string | null;

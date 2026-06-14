@@ -4,7 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect } from "react";
 import { get } from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
-import type { AuthUser } from "@/store/authStore";
+import type { AuthUser } from "@/types";
 
 export default function OAuthCallbackPage() {
   const router = useRouter();

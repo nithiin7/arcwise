@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { post } from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
-import type { AuthUser } from "@/store/authStore";
+import type { AuthUser } from "@/types";
 
 interface ResetResponse {
   access_token: string;

@@ -1,14 +1,23 @@
 import type { Review } from "@/types";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api";
-
 export async function streamReviewDesign(
   sessionId: string,
   onChunk: (text: string) => void,
 ): Promise<Review> {
-  const response = await fetch(`${API_BASE}/sessions/${sessionId}/review`, {
+  const apiBase = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api";
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (typeof window !== "undefined") {
+    try {
+      const raw = localStorage.getItem("arcwise-auth");
+      const token = raw ? (JSON.parse(raw)?.state?.token as string | null) : null;
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+    } catch {
+      // ignore parse errors
+    }
+  }
+  const response = await fetch(`${apiBase}/sessions/${sessionId}/review`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
   });
   if (!response.ok || !response.body) {
     const detail = await response.json().catch(() => ({}));

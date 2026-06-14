@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
 import LogoMark from "@/components/icons/LogoMark";
 import Spinner from "@/components/icons/Spinner";
-import { EXAMPLES, MODEL_GROUPS } from "@/constants/dashboard";
+import { EXAMPLES, HISTORY_PAGE_SIZE, MODEL_GROUPS } from "@/constants/dashboard";
 import * as api from "@/api";
 import { updateSessionTags } from "@/api/sessions";
 import { createSessionSchema, type CreateSessionForm } from "@/lib/schemas";
@@ -24,7 +24,6 @@ import { useSessionStore } from "@/store/sessionStore";
 import { useSettingsStore } from "@/store/settingsStore";
 import type { Session } from "@/types";
 
-const HISTORY_PAGE_SIZE = 5;
 
 export default function HomePage() {
   const router = useRouter();

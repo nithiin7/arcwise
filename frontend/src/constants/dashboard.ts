@@ -1,3 +1,5 @@
+export const HISTORY_PAGE_SIZE = 5;
+
 export const EXAMPLES = [
   "Design WhatsApp",
   "Design Twitter's feed",

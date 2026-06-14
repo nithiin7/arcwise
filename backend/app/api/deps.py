@@ -10,13 +10,6 @@ from app.services.user_store import User, get_user_by_id
 _bearer = HTTPBearer(auto_error=False)
 
 
-async def get_session_or_404(session_id: str) -> Session:
-    session = await get_session(session_id)
-    if session is None:
-        raise HTTPException(status_code=404, detail="Session not found")
-    return session
-
-
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
 ) -> User:
@@ -48,3 +41,17 @@ async def get_optional_user(
     if user is None:
         raise HTTPException(status_code=401, detail="User not found")
     return user
+
+
+async def get_session_or_404(
+    session_id: str,
+    user: User | None = Depends(get_optional_user),
+) -> Session:
+    session = await get_session(session_id)
+    if session is None:
+        raise HTTPException(status_code=404, detail="Session not found")
+    # Owned sessions are only accessible by their owner.
+    # Sessions with user_id=None (anonymous) are open to anyone.
+    if session.user_id is not None and (user is None or session.user_id != user.id):
+        raise HTTPException(status_code=404, detail="Session not found")
+    return session

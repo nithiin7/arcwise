@@ -4,11 +4,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from app.agents.clarification import generate_clarifications
-from app.api.deps import get_optional_user
+from app.api.deps import get_optional_user, get_session_or_404
 from app.models.session import ClarificationQA, CreateSessionRequest, Session, TokenUsage
 from app.services.session_store import (
     delete_session,
-    get_session,
     list_sessions,
     save_session,
     update_session_tags,
@@ -44,37 +43,27 @@ async def get_sessions(
 
 @router.patch("/{session_id}/tags")
 async def patch_session_tags(
-    session_id: str,
     body: UpdateTagsRequest,
-    _user: User | None = Depends(get_optional_user),
+    session: Session = Depends(get_session_or_404),
 ) -> dict[str, Any]:
-    session = await update_session_tags(session_id, body.tags)
-    if session is None:
+    updated = await update_session_tags(session.id, body.tags)
+    if updated is None:
         raise HTTPException(status_code=404, detail="Session not found")
-    return {"id": session.id, "tags": session.tags}
+    return {"id": updated.id, "tags": updated.tags}
 
 
 @router.get("/{session_id}")
 async def get_session_by_id(
-    session_id: str,
-    _user: User | None = Depends(get_optional_user),
+    session: Session = Depends(get_session_or_404),
 ) -> dict[str, Any]:
-    session = await get_session(session_id)
-    if session is None:
-        raise HTTPException(status_code=404, detail="Session not found")
-    data: dict[str, Any] = session.model_dump(mode="json", exclude={"api_key"})
-    return data
+    return session.model_dump(mode="json", exclude={"api_key"})
 
 
 @router.delete("/{session_id}", status_code=204)
 async def delete_session_by_id(
-    session_id: str,
-    _user: User | None = Depends(get_optional_user),
+    session: Session = Depends(get_session_or_404),
 ) -> None:
-    session = await get_session(session_id)
-    if session is None:
-        raise HTTPException(status_code=404, detail="Session not found")
-    await delete_session(session_id)
+    await delete_session(session.id)
 
 
 @router.post("")

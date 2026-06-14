@@ -51,6 +51,7 @@ class Session(BaseModel):
     problem: str
     model: str = Field(default_factory=lambda: settings.default_model)
     api_key: str | None = Field(default=None, exclude=True, repr=False)
+    user_id: str | None = Field(default=None, exclude=True, repr=False)
     user_scale: str | None = None
     clarifications: list[ClarificationQA] = Field(default_factory=list)
     architecture: Architecture = Field(default_factory=Architecture)

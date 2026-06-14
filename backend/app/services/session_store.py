@@ -35,6 +35,7 @@ def _record_to_session(record: SessionRecord) -> Session:
         problem=record.problem,
         model=record.model,
         api_key=record.api_key,
+        user_id=record.user_id,
         user_scale=record.user_scale,
         clarifications=clarifications,
         architecture=architecture,

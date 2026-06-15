@@ -46,6 +46,12 @@ class Revision(BaseModel):
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
+class FollowUpQA(BaseModel):
+    question: str
+    answer: str
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
 class Annotation(BaseModel):
     id: str
     x: float
@@ -65,6 +71,7 @@ class Architecture(BaseModel):
     final_mermaid: str = ""
     user_description: str | None = None
     annotations: list[Annotation] = Field(default_factory=list)
+    qa_history: list[FollowUpQA] = Field(default_factory=list)
 
 
 class Session(BaseModel):
@@ -110,3 +117,7 @@ class SubmitArchitectureRequest(BaseModel):
 
 class UpdateMermaidRequest(BaseModel):
     mermaid: str
+
+
+class FollowUpQARequest(BaseModel):
+    question: str

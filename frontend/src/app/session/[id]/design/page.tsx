@@ -15,7 +15,7 @@ import { chatMessageSchema, type ChatMessageForm } from "@/lib/schemas";
 import { useSessionStore } from "@/store/sessionStore";
 import { useSettingsStore } from "@/store/settingsStore";
 import { scoreColor } from "@/lib/utils";
-import type { Annotation, Revision } from "@/types";
+import type { Annotation, ChatMessage, QAPair, Revision } from "@/types";
 import { ArchitectureCanvas } from "@/components/design/ArchitectureCanvas";
 import { HistoryArrow, HistoryPill } from "@/components/design/HistoryStrip";
 import { MermaidEditorModal } from "@/components/design/MermaidEditorModal";
@@ -29,7 +29,7 @@ import SendIcon from "@/components/icons/SendIcon";
 import Spinner from "@/components/icons/Spinner";
 import ChevronDown from "@/components/icons/ChevronDown";
 
-type Tab = "refine" | "review";
+type Tab = "refine" | "qa" | "review";
 
 const MERMAID_KEYWORDS = new Set([
   'graph', 'flowchart', 'subgraph', 'end', 'style', 'classDef', 'class',
@@ -113,6 +113,43 @@ export default function DesignPage() {
     },
     [msgRefCallback]
   );
+
+  const {
+    register: qaRegister,
+    handleSubmit: qaRhfSubmit,
+    reset: resetQaForm,
+    formState: { isValid: isQaValid },
+  } = useForm<ChatMessageForm>({
+    resolver: zodResolver(chatMessageSchema),
+    mode: "onChange",
+    defaultValues: { message: "" },
+  });
+
+  const qaInputRef = useRef<HTMLInputElement | null>(null);
+  const { ref: qaRefCallback, ...qaRegisterRest } = qaRegister("message");
+  const mergedQaInputRef = useCallback(
+    (el: HTMLInputElement | null) => {
+      qaInputRef.current = el;
+      qaRefCallback(el);
+    },
+    [qaRefCallback]
+  );
+
+  const [qaMessages, setQaMessages] = useState<ChatMessage[]>(() =>
+    (useSessionStore.getState().session?.architecture.qa_history ?? []).flatMap(
+      (pair: QAPair) => [
+        { role: "user" as const, content: pair.question, timestamp: new Date(pair.timestamp) },
+        { role: "assistant" as const, content: pair.answer, timestamp: new Date(pair.timestamp) },
+      ]
+    )
+  );
+  const [streamingQA, setStreamingQA] = useState<string | null>(null);
+
+  const qaEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    qaEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [qaMessages]);
 
 
   const suggestMutation = useMutation({
@@ -218,6 +255,26 @@ export default function DesignPage() {
     },
   });
 
+  const qaMutation = useMutation({
+    mutationFn: (question: string) =>
+      api.streamFollowUpQA(sessionId, question, (chunk) =>
+        setStreamingQA((prev) => (prev ?? "") + chunk)
+      ),
+    onMutate: () => setStreamingQA(""),
+    onSuccess: (fullAnswer) => {
+      setQaMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: fullAnswer, timestamp: new Date() },
+      ]);
+      setStreamingQA(null);
+      qaInputRef.current?.focus();
+    },
+    onError: (err) => {
+      setStreamingQA(null);
+      toast.error(err instanceof Error ? err.message : "Failed to answer question.");
+    },
+  });
+
   const reviewMutation = useMutation({
     mutationFn: () =>
       api.streamReviewDesign(sessionId, (chunk) =>
@@ -303,6 +360,15 @@ export default function DesignPage() {
     addChatMessage({ role: "user", content: data.message, timestamp: new Date() });
     refineMutation.mutate(data.message);
     resetChat();
+  }
+
+  function handleAskQuestion(data: ChatMessageForm) {
+    setQaMessages((prev) => [
+      ...prev,
+      { role: "user", content: data.message, timestamp: new Date() },
+    ]);
+    qaMutation.mutate(data.message);
+    resetQaForm();
   }
 
   function handleApplyImprovements() {
@@ -717,8 +783,8 @@ export default function DesignPage() {
             flexShrink: 0,
           }}
         >
-          {/* Tab bar — only when review exists or is generating */}
-          {(hasReview || isReviewing) && (
+          {/* Tab bar — shown once the diagram exists */}
+          {!!currentMermaid && (
             <div
               style={{
                 display: "flex",
@@ -726,29 +792,33 @@ export default function DesignPage() {
                 flexShrink: 0,
               }}
             >
-              {(["refine", "review"] as Tab[]).map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  style={{
-                    flex: 1,
-                    padding: "11px 0",
-                    fontSize: 13,
-                    fontWeight: 500,
-                    fontFamily: "inherit",
-                    border: "none",
-                    borderBottom: activeTab === tab
-                      ? "2px solid var(--color-primary)"
-                      : "2px solid transparent",
-                    background: "transparent",
-                    color: activeTab === tab ? "var(--color-text)" : "var(--color-text-faint)",
-                    cursor: "pointer",
-                    transition: "color 0.15s",
-                  }}
-                >
-                  {tab === "refine" ? "Refine" : "Review"}
-                </button>
-              ))}
+              {(["refine", "qa", ...(hasReview || isReviewing ? ["review"] : [])] as Tab[]).map(
+                (tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    style={{
+                      flex: 1,
+                      padding: "11px 0",
+                      fontSize: 13,
+                      fontWeight: 500,
+                      fontFamily: "inherit",
+                      border: "none",
+                      borderBottom:
+                        activeTab === tab
+                          ? "2px solid var(--color-primary)"
+                          : "2px solid transparent",
+                      background: "transparent",
+                      color:
+                        activeTab === tab ? "var(--color-text)" : "var(--color-text-faint)",
+                      cursor: "pointer",
+                      transition: "color 0.15s",
+                    }}
+                  >
+                    {tab === "refine" ? "Refine" : tab === "qa" ? "Q&A" : "Review"}
+                  </button>
+                )
+              )}
             </div>
           )}
 
@@ -1053,6 +1123,152 @@ export default function DesignPage() {
                   style={{ width: 34, height: 34, padding: 0 }}
                 >
                   {refineMutation.isPending ? <Spinner /> : <SendIcon />}
+                </Button>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Q&A tab */}
+          {activeTab === "qa" && (
+            <motion.div
+              key="qa"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+              style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}
+            >
+              {/* Messages */}
+              <div
+                style={{
+                  flex: 1,
+                  overflowY: "auto",
+                  padding: "12px 12px 8px",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 8,
+                }}
+              >
+                {qaMessages.length === 0 && (
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      height: "100%",
+                      color: "var(--color-text-faint)",
+                      fontSize: 13,
+                      textAlign: "center",
+                      padding: "0 16px",
+                    }}
+                  >
+                    Ask anything about this design…
+                  </div>
+                )}
+
+                <AnimatePresence initial={false}>
+                  {qaMessages.map((msg, i) => (
+                    <motion.div
+                      key={i}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: msg.role === "user" ? "flex-end" : "flex-start",
+                      }}
+                    >
+                      <div
+                        style={{
+                          maxWidth: "85%",
+                          background:
+                            msg.role === "user"
+                              ? "rgba(99,102,241,0.15)"
+                              : "var(--color-surface)",
+                          borderRadius: "var(--radius-md)",
+                          padding: "8px 12px",
+                        }}
+                      >
+                        <p
+                          style={{
+                            fontSize: 13,
+                            color: "var(--color-text)",
+                            lineHeight: 1.6,
+                            margin: 0,
+                            whiteSpace: "pre-wrap",
+                          }}
+                        >
+                          {msg.content}
+                        </p>
+                      </div>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+
+                {streamingQA !== null && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                    style={{ display: "flex", flexDirection: "column", alignItems: "flex-start" }}
+                  >
+                    <div
+                      style={{
+                        maxWidth: "85%",
+                        background: "var(--color-surface)",
+                        borderRadius: "var(--radius-md)",
+                        padding: "8px 12px",
+                      }}
+                    >
+                      <p
+                        style={{
+                          fontSize: 13,
+                          color: "var(--color-text)",
+                          lineHeight: 1.6,
+                          margin: 0,
+                          whiteSpace: "pre-wrap",
+                        }}
+                      >
+                        {streamingQA || "…"}
+                      </p>
+                    </div>
+                  </motion.div>
+                )}
+
+                <div ref={qaEndRef} />
+              </div>
+
+              {/* Input */}
+              <div
+                style={{
+                  borderTop: "1px solid var(--color-border)",
+                  padding: "8px 12px",
+                  display: "flex",
+                  gap: 8,
+                  flexShrink: 0,
+                }}
+              >
+                <Input
+                  ref={mergedQaInputRef}
+                  {...qaRegisterRest}
+                  type="text"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && (!e.shiftKey || e.metaKey || e.ctrlKey)) {
+                      e.preventDefault();
+                      qaRhfSubmit(handleAskQuestion)();
+                    }
+                  }}
+                  placeholder="Why did you choose this component?"
+                  disabled={qaMutation.isPending}
+                  style={{ flex: 1, padding: "8px 10px" }}
+                />
+                <Button
+                  onClick={qaRhfSubmit(handleAskQuestion)}
+                  disabled={qaMutation.isPending || !isQaValid}
+                  style={{ width: 34, height: 34, padding: 0 }}
+                >
+                  {qaMutation.isPending ? <Spinner /> : <SendIcon />}
                 </Button>
               </div>
             </motion.div>

@@ -53,6 +53,12 @@ export interface Revision {
   timestamp: string;
 }
 
+export interface QAPair {
+  question: string;
+  answer: string;
+  timestamp: string;
+}
+
 export interface Architecture {
   llm_suggested_mermaid: string;
   llm_explanation: string;
@@ -62,6 +68,7 @@ export interface Architecture {
   final_mermaid: string;
   user_description?: string;
   annotations?: Annotation[];
+  qa_history?: QAPair[];
 }
 
 export interface Scores {

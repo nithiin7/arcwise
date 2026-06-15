@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { KeyboardEvent, useState } from "react";
+import { KeyboardEvent, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
@@ -22,16 +22,24 @@ import { updateSessionTags } from "@/api/sessions";
 import { createSessionSchema, type CreateSessionForm } from "@/lib/schemas";
 import { useSessionStore } from "@/store/sessionStore";
 import { useSettingsStore } from "@/store/settingsStore";
+import { useAuthStore } from "@/store/authStore";
 import type { Session } from "@/types";
 
 
 export default function HomePage() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const token = useAuthStore((s) => s.token);
   const setSession = useSessionStore((s) => s.setSession);
   const getKeyForModel = useSettingsStore((s) => s.getKeyForModel);
   const model = useSettingsStore((s) => s.selectedModel);
   const setModel = useSettingsStore((s) => s.setSelectedModel);
+
+  // Redirect to login if token is cleared (e.g. logout from another tab)
+  useEffect(() => {
+    if (!token) router.replace("/login");
+  }, [token, router]);
+
   const [showAll, setShowAll] = useState(false);
   const [search, setSearch] = useState("");
   const [activeTagFilters, setActiveTagFilters] = useState<string[]>([]);

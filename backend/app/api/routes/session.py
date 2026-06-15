@@ -5,7 +5,13 @@ from pydantic import BaseModel
 
 from app.agents.clarification import generate_clarifications
 from app.api.deps import get_optional_user, get_session_or_404
-from app.models.session import ClarificationQA, CreateSessionRequest, Session, TokenUsage
+from app.models.session import (
+    Annotation,
+    ClarificationQA,
+    CreateSessionRequest,
+    Session,
+    TokenUsage,
+)
 from app.services.session_store import (
     delete_session,
     list_sessions,
@@ -19,6 +25,10 @@ router = APIRouter()
 
 class UpdateTagsRequest(BaseModel):
     tags: list[str]
+
+
+class UpdateAnnotationsRequest(BaseModel):
+    annotations: list[Annotation]
 
 
 @router.get("", include_in_schema=True)
@@ -50,6 +60,16 @@ async def patch_session_tags(
     if updated is None:
         raise HTTPException(status_code=404, detail="Session not found")
     return {"id": updated.id, "tags": updated.tags}
+
+
+@router.put("/{session_id}/annotations")
+async def update_annotations(
+    body: UpdateAnnotationsRequest,
+    session: Session = Depends(get_session_or_404),
+) -> dict[str, Any]:
+    session.architecture.annotations = body.annotations
+    await save_session(session)
+    return {"ok": True}
 
 
 @router.get("/{session_id}")

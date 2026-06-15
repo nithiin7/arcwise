@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AuthCard } from "@/components/auth/AuthCard";
 import { AuthDivider } from "@/components/auth/AuthDivider";
 import { OAuthButtons } from "@/components/auth/OAuthButtons";
@@ -16,6 +16,11 @@ export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const setAuth = useAuthStore((s) => s.setAuth);
+  const token = useAuthStore((s) => s.token);
+
+  useEffect(() => {
+    if (token) router.replace(searchParams.get("next") ?? "/dashboard");
+  }, [token, router, searchParams]);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

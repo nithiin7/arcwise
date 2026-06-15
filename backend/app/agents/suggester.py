@@ -29,7 +29,9 @@ Return ONLY valid JSON — no prose, no markdown fences:
 For "tags": exactly 1-2 short lowercase labels (e.g. "url-shortener", "high-scale", "real-time", "microservices", "caching", "streaming"). These categorize the system type and key architectural property."""
 
 
-async def suggest_architecture(session: Session, diagram_direction: str = "LR") -> tuple[dict[str, Any], LLMUsage]:
+async def suggest_architecture(
+    session: Session, diagram_direction: str = "LR", template_id: str | None = None
+) -> tuple[dict[str, Any], LLMUsage]:
     direction = diagram_direction if diagram_direction in ("LR", "TD") else "LR"
     system_prompt = SYSTEM_PROMPT_TEMPLATE.format(direction=direction)
     lines: list[str] = [f"Problem: {session.problem}"]
@@ -41,6 +43,15 @@ async def suggest_architecture(session: Session, diagram_direction: str = "LR") 
             if qa.answer:
                 lines.append(f"  Q: {qa.question}")
                 lines.append(f"  A: {qa.answer}")
+    if template_id:
+        from app.knowledge.templates import TEMPLATES_BY_ID
+        template = TEMPLATES_BY_ID.get(template_id)
+        if template:
+            lines.append(f"\nStarting template — {template['name']}:")
+            lines.append(
+                "Use this as a structural base, adapting components and edges for the problem above:"
+            )
+            lines.append(template["mermaid_dsl"])
     user_prompt = "\n".join(lines)
     raw, usage = await complete(
         system=system_prompt, user=user_prompt, model=session.model,

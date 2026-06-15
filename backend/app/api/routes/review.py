@@ -8,6 +8,7 @@ from app.agents.reviewer import stream_review_design
 from app.api.deps import get_session_or_404
 from app.models.review import Review
 from app.models.session import Session
+from app.services.badge_service import award_badges
 from app.services.session_store import save_session
 
 router = APIRouter()
@@ -25,7 +26,14 @@ async def review(
                     session.status = "complete"
                     session.review = Review(**event["review"])
                     await save_session(session)
-                yield f"data: {json.dumps(event)}\n\n"
+                    new_badges: list[dict[str, object]] = []
+                    if session.user_id:
+                        new_badges = await award_badges(
+                            session.user_id, "review_complete", review=session.review
+                        )
+                    yield f"data: {json.dumps({**event, 'new_badges': new_badges})}\n\n"
+                else:
+                    yield f"data: {json.dumps(event)}\n\n"
         except Exception as e:
             yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
 

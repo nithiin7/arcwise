@@ -1,13 +1,43 @@
+export interface Badge {
+  id: string;
+  earned_at: string;
+}
+
+export interface BadgeAward {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  earned_at: string;
+}
+
 export interface AuthUser {
   id: string;
   email: string;
   name: string | null;
   avatar_url: string | null;
+  created_at?: string | null;
+  has_github?: boolean;
+  has_google?: boolean;
+  has_password?: boolean;
+  badges?: Badge[];
 }
 
 export interface AuthResponse {
   access_token: string;
   user: AuthUser;
+}
+
+export type AnnotationColor = "yellow" | "blue" | "green" | "pink";
+
+export interface Annotation {
+  id: string;
+  x: number;
+  y: number;
+  text: string;
+  doc_url?: string;
+  owner?: string;
+  color: AnnotationColor;
 }
 
 export interface ClarificationQA {
@@ -23,6 +53,12 @@ export interface Revision {
   timestamp: string;
 }
 
+export interface QAPair {
+  question: string;
+  answer: string;
+  timestamp: string;
+}
+
 export interface Architecture {
   llm_suggested_mermaid: string;
   llm_explanation: string;
@@ -31,6 +67,8 @@ export interface Architecture {
   revisions: Revision[];
   final_mermaid: string;
   user_description?: string;
+  annotations?: Annotation[];
+  qa_history?: QAPair[];
 }
 
 export interface Scores {
@@ -133,6 +171,8 @@ export interface ArchitectureCanvasProps {
   scaleAssumption?: string;
   onEditCode?: () => void;
   onExportJson?: () => void;
+  annotations?: Annotation[];
+  onAnnotationsChange?: (annotations: Annotation[]) => void;
 }
 
 export interface ComponentJustificationsProps {

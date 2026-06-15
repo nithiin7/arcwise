@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from app.agents.refiner import refine_architecture
 from app.api.deps import get_session_or_404
 from app.models.session import RefineArchitectureRequest, Revision, Session, TokenUsage
+from app.services.badge_service import award_badges
 from app.services.session_store import save_session
 
 router = APIRouter()
@@ -31,10 +32,14 @@ async def refine(
     session.architecture.final_mermaid = result["updated_mermaid"]
     session.token_usage = session.token_usage + TokenUsage.from_llm(usage)
     await save_session(session)
+    new_badges: list[dict[str, Any]] = []
+    if session.user_id:
+        new_badges = await award_badges(session.user_id, "first_refine")
     return {
         "updated_mermaid": result["updated_mermaid"],
         "diff_summary": result["diff_summary"],
         "revision_index": len(session.architecture.revisions) - 1,
+        "new_badges": new_badges,
     }
 
 

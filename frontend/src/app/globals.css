@@ -4,6 +4,7 @@
 /* Light theme (default) */
 :root {
   --color-bg: #fafafa;
+  --color-bg-raw: 250,250,250;
   --color-surface: #ffffff;
   --color-surface-2: #f4f4f5;
   --color-surface-offset: #e4e4e7;
@@ -27,6 +28,7 @@
 @media (prefers-color-scheme: dark) {
   :root {
     --color-bg: #0f0f10;
+    --color-bg-raw: 15,15,16;
     --color-surface: #18181b;
     --color-surface-2: #1f1f23;
     --color-surface-offset: #27272a;
@@ -44,6 +46,7 @@
 /* Explicit dark class overrides media query */
 html.dark {
   --color-bg: #0f0f10;
+  --color-bg-raw: 15,15,16;
   --color-surface: #18181b;
   --color-surface-2: #1f1f23;
   --color-surface-offset: #27272a;
@@ -60,6 +63,7 @@ html.dark {
 /* Explicit light class overrides media query */
 html.light {
   --color-bg: #fafafa;
+  --color-bg-raw: 250,250,250;
   --color-surface: #ffffff;
   --color-surface-2: #f4f4f5;
   --color-surface-offset: #e4e4e7;

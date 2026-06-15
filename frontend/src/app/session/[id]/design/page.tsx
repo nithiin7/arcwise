@@ -11,14 +11,16 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
 import * as api from "@/api";
+import type { ArchSmell } from "@/api";
 import { chatMessageSchema, type ChatMessageForm } from "@/lib/schemas";
 import { useSessionStore } from "@/store/sessionStore";
 import { useSettingsStore } from "@/store/settingsStore";
 import { scoreColor } from "@/lib/utils";
-import type { Revision } from "@/types";
+import type { Annotation, ChatMessage, QAPair, Revision } from "@/types";
 import { ArchitectureCanvas } from "@/components/design/ArchitectureCanvas";
 import { HistoryArrow, HistoryPill } from "@/components/design/HistoryStrip";
 import { MermaidEditorModal } from "@/components/design/MermaidEditorModal";
+import { TemplatePicker } from "@/components/design/TemplatePicker";
 import { ReviewPanel } from "@/components/design/ReviewPanel";
 import { ShareModal } from "@/components/design/ShareModal";
 import { Button } from "@/components/ui/Button";
@@ -28,7 +30,7 @@ import SendIcon from "@/components/icons/SendIcon";
 import Spinner from "@/components/icons/Spinner";
 import ChevronDown from "@/components/icons/ChevronDown";
 
-type Tab = "refine" | "review";
+type Tab = "refine" | "qa" | "review";
 
 const MERMAID_KEYWORDS = new Set([
   'graph', 'flowchart', 'subgraph', 'end', 'style', 'classDef', 'class',
@@ -75,6 +77,7 @@ export default function DesignPage() {
   const setReview = useSessionStore((s) => s.setReview);
   const reset = useSessionStore((s) => s.reset);
   const diagramDirection = useSettingsStore((s) => s.diagramDirection);
+  const smellDetectionEnabled = useSettingsStore((s) => s.smellDetectionEnabled);
 
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
@@ -86,9 +89,12 @@ export default function DesignPage() {
   });
   const [justificationsOpen, setJustificationsOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [smells, setSmells] = useState<ArchSmell[]>([]);
+  const [smellsOpen, setSmellsOpen] = useState(true);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputFocusRef = useRef<HTMLInputElement | null>(null);
+  const annotationSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { ref: descRef, height: descHeight, onDragStart: handleDescDragStart } = useDragResize();
 
   const {
@@ -112,9 +118,47 @@ export default function DesignPage() {
     [msgRefCallback]
   );
 
+  const {
+    register: qaRegister,
+    handleSubmit: qaRhfSubmit,
+    reset: resetQaForm,
+    formState: { isValid: isQaValid },
+  } = useForm<ChatMessageForm>({
+    resolver: zodResolver(chatMessageSchema),
+    mode: "onChange",
+    defaultValues: { message: "" },
+  });
+
+  const qaInputRef = useRef<HTMLInputElement | null>(null);
+  const { ref: qaRefCallback, ...qaRegisterRest } = qaRegister("message");
+  const mergedQaInputRef = useCallback(
+    (el: HTMLInputElement | null) => {
+      qaInputRef.current = el;
+      qaRefCallback(el);
+    },
+    [qaRefCallback]
+  );
+
+  const [qaMessages, setQaMessages] = useState<ChatMessage[]>(() =>
+    (useSessionStore.getState().session?.architecture.qa_history ?? []).flatMap(
+      (pair: QAPair) => [
+        { role: "user" as const, content: pair.question, timestamp: new Date(pair.timestamp) },
+        { role: "assistant" as const, content: pair.answer, timestamp: new Date(pair.timestamp) },
+      ]
+    )
+  );
+  const [streamingQA, setStreamingQA] = useState<string | null>(null);
+
+  const qaEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    qaEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [qaMessages]);
+
 
   const suggestMutation = useMutation({
-    mutationFn: () => api.suggestArchitecture(sessionId, diagramDirection),
+    mutationFn: (variables?: { templateId?: string }) =>
+      api.suggestArchitecture(sessionId, diagramDirection, variables?.templateId),
     onSuccess: (result) => {
       setSession({
         ...session!,
@@ -139,9 +183,6 @@ export default function DesignPage() {
       if (session.review) {
         setReview(session.review);
       }
-      if (!session.architecture.llm_suggested_mermaid) {
-        suggestMutation.mutate();
-      }
       return;
     }
     // Session missing or stale (different ID) — fetch from server
@@ -150,9 +191,6 @@ export default function DesignPage() {
       if (s.review) {
         setReview(s.review);
         setActiveTab("review");
-      }
-      if (!s.architecture.llm_suggested_mermaid) {
-        suggestMutation.mutate();
       }
     }).catch(() => router.replace("/"));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -184,6 +222,7 @@ export default function DesignPage() {
 
   const refineMutation = useMutation({
     mutationFn: (message: string) => api.refineArchitecture(sessionId, message),
+    onMutate: () => { setSmells([]); },
     onSuccess: (result, message) => {
       addChatMessage({
         role: "assistant",
@@ -208,10 +247,37 @@ export default function DesignPage() {
           },
         });
       }
+      result.new_badges?.forEach((badge) =>
+        toast(`${badge.icon} Badge Unlocked: ${badge.name}`, {
+          description: badge.description,
+          duration: 5000,
+        }),
+      );
+      if (smellDetectionEnabled) smellsMutation.mutate();
       inputFocusRef.current?.focus();
     },
     onError: (err) => {
       toast.error(err instanceof Error ? err.message : "Failed to refine architecture.");
+    },
+  });
+
+  const qaMutation = useMutation({
+    mutationFn: (question: string) =>
+      api.streamFollowUpQA(sessionId, question, (chunk) =>
+        setStreamingQA((prev) => (prev ?? "") + chunk)
+      ),
+    onMutate: () => setStreamingQA(""),
+    onSuccess: (fullAnswer) => {
+      setQaMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: fullAnswer, timestamp: new Date() },
+      ]);
+      setStreamingQA(null);
+      qaInputRef.current?.focus();
+    },
+    onError: (err) => {
+      setStreamingQA(null);
+      toast.error(err instanceof Error ? err.message : "Failed to answer question.");
     },
   });
 
@@ -221,9 +287,15 @@ export default function DesignPage() {
         setStreamingFeedback((prev) => (prev ?? "") + chunk),
       ),
     onMutate: () => setStreamingFeedback(""),
-    onSuccess: (r) => {
+    onSuccess: ({ review, newBadges }) => {
       setStreamingFeedback(null);
-      setReview(r);
+      setReview(review);
+      newBadges?.forEach((badge) =>
+        toast(`${badge.icon} Badge Unlocked: ${badge.name}`, {
+          description: badge.description,
+          duration: 5000,
+        }),
+      );
     },
     onError: (err) => {
       setStreamingFeedback(null);
@@ -231,9 +303,23 @@ export default function DesignPage() {
     },
   });
 
+  const smellsMutation = useMutation({
+    mutationFn: () => api.detectSmells(sessionId),
+    onSuccess: (detected) => {
+      setSmells(detected);
+      setSmellsOpen(true);
+    },
+  });
+
   const submitMutation = useMutation({
     mutationFn: () => api.submitArchitecture(sessionId),
-    onSuccess: () => {
+    onSuccess: (result) => {
+      result.new_badges?.forEach((badge) =>
+        toast(`${badge.icon} Badge Unlocked: ${badge.name}`, {
+          description: badge.description,
+          duration: 5000,
+        }),
+      );
       setActiveTab("review");
       reviewMutation.mutate();
     },
@@ -272,10 +358,31 @@ export default function DesignPage() {
     setPreviewIndex((prev) => (prev === index ? null : index));
   }
 
+  function handleAnnotationsChange(annotations: Annotation[]) {
+    const latest = useSessionStore.getState().session;
+    if (!latest) return;
+    setSession({ ...latest, architecture: { ...latest.architecture, annotations } });
+    if (annotationSaveTimer.current) clearTimeout(annotationSaveTimer.current);
+    annotationSaveTimer.current = setTimeout(() => {
+      api.updateAnnotations(sessionId, annotations).catch(() =>
+        toast.error("Failed to save annotations.")
+      );
+    }, 600);
+  }
+
   function handleSend(data: ChatMessageForm) {
     addChatMessage({ role: "user", content: data.message, timestamp: new Date() });
     refineMutation.mutate(data.message);
     resetChat();
+  }
+
+  function handleAskQuestion(data: ChatMessageForm) {
+    setQaMessages((prev) => [
+      ...prev,
+      { role: "user", content: data.message, timestamp: new Date() },
+    ]);
+    qaMutation.mutate(data.message);
+    resetQaForm();
   }
 
   function handleApplyImprovements() {
@@ -298,6 +405,16 @@ export default function DesignPage() {
   const justificationEntries = Object.entries(arch.component_justifications);
   const showHistoryStrip = arch.revisions.length > 0 || !!arch.llm_suggested_mermaid;
 
+  const showTemplatePicker =
+    !!session &&
+    session.id === sessionId &&
+    !session.architecture.llm_suggested_mermaid &&
+    !suggestMutation.isPending;
+
+  function handleTemplateSelect(templateId: string | undefined) {
+    suggestMutation.mutate(templateId ? { templateId } : undefined);
+  }
+
   return (
     <div
       style={{
@@ -306,6 +423,7 @@ export default function DesignPage() {
         height: "100vh",
         background: "var(--color-bg)",
         overflow: "hidden",
+        position: "relative",
       }}
     >
       {/* Header */}
@@ -401,7 +519,13 @@ export default function DesignPage() {
         <Button
           variant="secondary"
           onClick={async () => {
-            const { share_token } = await api.createShareLink(sessionId);
+            const { share_token, new_badges } = await api.createShareLink(sessionId);
+            new_badges?.forEach((badge) =>
+              toast(`${badge.icon} Badge Unlocked: ${badge.name}`, {
+                description: badge.description,
+                duration: 5000,
+              }),
+            );
             setShareUrl(`${window.location.origin}/share/${share_token}`);
           }}
           disabled={!currentMermaid}
@@ -547,6 +671,8 @@ export default function DesignPage() {
                 isLoading={suggestMutation.isPending}
                 scaleAssumption={arch.scale_assumption}
                 onEditCode={() => setCodeEditorOpen(true)}
+                annotations={arch.annotations}
+                onAnnotationsChange={handleAnnotationsChange}
                 onExportJson={() => {
                   const data = {
                     problem: session.problem,
@@ -573,6 +699,219 @@ export default function DesignPage() {
               />
             )}
           </div>
+
+          {/* Problems panel (VS Code style) */}
+          <AnimatePresence>
+            {smellsMutation.isPending && (
+              <motion.div
+                key="smells-loading"
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.18 }}
+                style={{
+                  overflow: "hidden",
+                  flexShrink: 0,
+                  borderTop: "1px solid var(--color-border)",
+                  background: "var(--color-surface)",
+                }}
+              >
+                <div
+                  style={{
+                    height: 32,
+                    padding: "0 12px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                  }}
+                >
+                  <Spinner size={11} />
+                  <span style={{ fontSize: 11, color: "var(--color-text-faint)" }}>
+                    Scanning for architecture issues…
+                  </span>
+                </div>
+              </motion.div>
+            )}
+            {!smellsMutation.isPending && smells.length > 0 && (
+              <motion.div
+                key="smells-results"
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.2 }}
+                style={{
+                  overflow: "hidden",
+                  flexShrink: 0,
+                  borderTop: "1px solid var(--color-border)",
+                  background: "var(--color-surface)",
+                  display: "flex",
+                  flexDirection: "column",
+                }}
+              >
+                {/* Header bar — clicking it expands/collapses */}
+                <div
+                  style={{
+                    height: 32,
+                    display: "flex",
+                    alignItems: "center",
+                    padding: "0 12px",
+                    cursor: "pointer",
+                    userSelect: "none",
+                    gap: 8,
+                  }}
+                  onClick={() => setSmellsOpen((o) => !o)}
+                >
+                  <motion.span
+                    animate={{ rotate: smellsOpen ? 0 : -90 }}
+                    transition={{ duration: 0.15 }}
+                    style={{ display: "flex", color: "var(--color-text-faint)", flexShrink: 0 }}
+                  >
+                    <ChevronDown />
+                  </motion.span>
+                  <span
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 600,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.07em",
+                      color: "var(--color-text-faint)",
+                      flex: 1,
+                    }}
+                  >
+                    Problems
+                  </span>
+                  {smells.some((s) => s.severity === "critical") && (
+                    <span
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 600,
+                        color: "#ef4444",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 4,
+                      }}
+                    >
+                      <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#ef4444", display: "inline-block" }} />
+                      {smells.filter((s) => s.severity === "critical").length} error{smells.filter((s) => s.severity === "critical").length !== 1 ? "s" : ""}
+                    </span>
+                  )}
+                  {smells.some((s) => s.severity === "warning") && (
+                    <span
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 600,
+                        color: "#f59e0b",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 4,
+                      }}
+                    >
+                      <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#f59e0b", display: "inline-block" }} />
+                      {smells.filter((s) => s.severity === "warning").length} warning{smells.filter((s) => s.severity === "warning").length !== 1 ? "s" : ""}
+                    </span>
+                  )}
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setSmells([]); }}
+                    title="Dismiss"
+                    style={{
+                      background: "transparent",
+                      border: "none",
+                      cursor: "pointer",
+                      color: "var(--color-text-faint)",
+                      fontSize: 16,
+                      lineHeight: 1,
+                      padding: "0 2px",
+                      fontFamily: "inherit",
+                      flexShrink: 0,
+                    }}
+                  >
+                    ×
+                  </button>
+                </div>
+
+                {/* Smell rows — VS Code list style */}
+                <AnimatePresence>
+                  {smellsOpen && (
+                    <motion.div
+                      initial={{ height: 0 }}
+                      animate={{ height: "auto" }}
+                      exit={{ height: 0 }}
+                      transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+                      style={{ overflow: "hidden" }}
+                    >
+                      <div
+                        style={{
+                          maxHeight: 180,
+                          overflowY: "auto",
+                          borderTop: "1px solid var(--color-border)",
+                        }}
+                      >
+                        {smells.map((smell, i) => (
+                          <div
+                            key={i}
+                            style={{
+                              display: "flex",
+                              alignItems: "flex-start",
+                              gap: 10,
+                              padding: "7px 14px",
+                              borderBottom: i < smells.length - 1 ? "1px solid var(--color-border)" : "none",
+                            }}
+                          >
+                            <span
+                              style={{
+                                fontSize: 13,
+                                flexShrink: 0,
+                                marginTop: 1,
+                                color: smell.severity === "critical" ? "#ef4444" : "#f59e0b",
+                              }}
+                            >
+                              {smell.severity === "critical" ? "●" : "◆"}
+                            </span>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                                <span
+                                  style={{
+                                    fontSize: 12,
+                                    fontWeight: 600,
+                                    color: "var(--color-text)",
+                                    lineHeight: 1.4,
+                                  }}
+                                >
+                                  {smell.title}
+                                </span>
+                                <span
+                                  style={{
+                                    fontSize: 11,
+                                    color: "var(--color-text-faint)",
+                                    background: "var(--color-surface-offset)",
+                                    padding: "1px 6px",
+                                    borderRadius: 999,
+                                    flexShrink: 0,
+                                  }}
+                                >
+                                  {smell.component}
+                                </span>
+                              </div>
+                              <p
+                                style={{
+                                  fontSize: 12,
+                                  color: "var(--color-text-muted)",
+                                  margin: "2px 0 0",
+                                  lineHeight: 1.45,
+                                }}
+                              >
+                                {smell.hint}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* History strip */}
           {showHistoryStrip && (
@@ -671,8 +1010,8 @@ export default function DesignPage() {
             flexShrink: 0,
           }}
         >
-          {/* Tab bar — only when review exists or is generating */}
-          {(hasReview || isReviewing) && (
+          {/* Tab bar — shown once the diagram exists */}
+          {!!currentMermaid && (
             <div
               style={{
                 display: "flex",
@@ -680,29 +1019,33 @@ export default function DesignPage() {
                 flexShrink: 0,
               }}
             >
-              {(["refine", "review"] as Tab[]).map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  style={{
-                    flex: 1,
-                    padding: "11px 0",
-                    fontSize: 13,
-                    fontWeight: 500,
-                    fontFamily: "inherit",
-                    border: "none",
-                    borderBottom: activeTab === tab
-                      ? "2px solid var(--color-primary)"
-                      : "2px solid transparent",
-                    background: "transparent",
-                    color: activeTab === tab ? "var(--color-text)" : "var(--color-text-faint)",
-                    cursor: "pointer",
-                    transition: "color 0.15s",
-                  }}
-                >
-                  {tab === "refine" ? "Refine" : "Review"}
-                </button>
-              ))}
+              {(["refine", "qa", ...(hasReview || isReviewing ? ["review"] : [])] as Tab[]).map(
+                (tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    style={{
+                      flex: 1,
+                      padding: "11px 0",
+                      fontSize: 13,
+                      fontWeight: 500,
+                      fontFamily: "inherit",
+                      border: "none",
+                      borderBottom:
+                        activeTab === tab
+                          ? "2px solid var(--color-primary)"
+                          : "2px solid transparent",
+                      background: "transparent",
+                      color:
+                        activeTab === tab ? "var(--color-text)" : "var(--color-text-faint)",
+                      cursor: "pointer",
+                      transition: "color 0.15s",
+                    }}
+                  >
+                    {tab === "refine" ? "Refine" : tab === "qa" ? "Q&A" : "Review"}
+                  </button>
+                )
+              )}
             </div>
           )}
 
@@ -1012,6 +1355,152 @@ export default function DesignPage() {
             </motion.div>
           )}
 
+          {/* Q&A tab */}
+          {activeTab === "qa" && (
+            <motion.div
+              key="qa"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+              style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}
+            >
+              {/* Messages */}
+              <div
+                style={{
+                  flex: 1,
+                  overflowY: "auto",
+                  padding: "12px 12px 8px",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 8,
+                }}
+              >
+                {qaMessages.length === 0 && (
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      height: "100%",
+                      color: "var(--color-text-faint)",
+                      fontSize: 13,
+                      textAlign: "center",
+                      padding: "0 16px",
+                    }}
+                  >
+                    Ask anything about this design…
+                  </div>
+                )}
+
+                <AnimatePresence initial={false}>
+                  {qaMessages.map((msg, i) => (
+                    <motion.div
+                      key={i}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: msg.role === "user" ? "flex-end" : "flex-start",
+                      }}
+                    >
+                      <div
+                        style={{
+                          maxWidth: "85%",
+                          background:
+                            msg.role === "user"
+                              ? "rgba(99,102,241,0.15)"
+                              : "var(--color-surface)",
+                          borderRadius: "var(--radius-md)",
+                          padding: "8px 12px",
+                        }}
+                      >
+                        <p
+                          style={{
+                            fontSize: 13,
+                            color: "var(--color-text)",
+                            lineHeight: 1.6,
+                            margin: 0,
+                            whiteSpace: "pre-wrap",
+                          }}
+                        >
+                          {msg.content}
+                        </p>
+                      </div>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+
+                {streamingQA !== null && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                    style={{ display: "flex", flexDirection: "column", alignItems: "flex-start" }}
+                  >
+                    <div
+                      style={{
+                        maxWidth: "85%",
+                        background: "var(--color-surface)",
+                        borderRadius: "var(--radius-md)",
+                        padding: "8px 12px",
+                      }}
+                    >
+                      <p
+                        style={{
+                          fontSize: 13,
+                          color: "var(--color-text)",
+                          lineHeight: 1.6,
+                          margin: 0,
+                          whiteSpace: "pre-wrap",
+                        }}
+                      >
+                        {streamingQA || "…"}
+                      </p>
+                    </div>
+                  </motion.div>
+                )}
+
+                <div ref={qaEndRef} />
+              </div>
+
+              {/* Input */}
+              <div
+                style={{
+                  borderTop: "1px solid var(--color-border)",
+                  padding: "8px 12px",
+                  display: "flex",
+                  gap: 8,
+                  flexShrink: 0,
+                }}
+              >
+                <Input
+                  ref={mergedQaInputRef}
+                  {...qaRegisterRest}
+                  type="text"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && (!e.shiftKey || e.metaKey || e.ctrlKey)) {
+                      e.preventDefault();
+                      qaRhfSubmit(handleAskQuestion)();
+                    }
+                  }}
+                  placeholder="Why did you choose this component?"
+                  disabled={qaMutation.isPending}
+                  style={{ flex: 1, padding: "8px 10px" }}
+                />
+                <Button
+                  onClick={qaRhfSubmit(handleAskQuestion)}
+                  disabled={qaMutation.isPending || !isQaValid}
+                  style={{ width: 34, height: 34, padding: 0 }}
+                >
+                  {qaMutation.isPending ? <Spinner /> : <SendIcon />}
+                </Button>
+              </div>
+            </motion.div>
+          )}
+
           {/* Review tab */}
           {activeTab === "review" && (
             <motion.div
@@ -1101,6 +1590,12 @@ export default function DesignPage() {
           </AnimatePresence>
         </div>
       </div>
+
+      <AnimatePresence>
+        {showTemplatePicker && (
+          <TemplatePicker onSelect={handleTemplateSelect} />
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {shareUrl && (

@@ -1,11 +1,18 @@
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.db.engine import AsyncSessionLocal
 from app.db.models import SessionRecord
 from app.models.review import Review
-from app.models.session import Architecture, ClarificationQA, Revision, Session, TokenUsage
+from app.models.session import (
+    Annotation,
+    Architecture,
+    ClarificationQA,
+    Revision,
+    Session,
+    TokenUsage,
+)
 
 
 def _record_to_session(record: SessionRecord) -> Session:
@@ -20,6 +27,7 @@ def _record_to_session(record: SessionRecord) -> Session:
         revisions=[Revision(**r) for r in raw_arch.get("revisions", [])],
         final_mermaid=raw_arch.get("final_mermaid", ""),
         user_description=raw_arch.get("user_description"),
+        annotations=[Annotation(**a) for a in raw_arch.get("annotations", [])],
     )
 
     raw_usage = record.token_usage or {}
@@ -58,6 +66,7 @@ def _arch_to_json(session: Session) -> dict[str, Any]:
         "revisions": [r.model_dump(mode="json") for r in arch.revisions],
         "final_mermaid": arch.final_mermaid,
         "user_description": arch.user_description,
+        "annotations": [a.model_dump(mode="json") for a in arch.annotations],
     }
 
 
@@ -130,6 +139,19 @@ async def list_sessions(limit: int = 50, user_id: str | None = None) -> list[Ses
             q = q.where(SessionRecord.user_id == user_id)
         result = await db.execute(q)
         return [_record_to_session(r) for r in result.scalars()]
+
+
+async def count_submitted_sessions(user_id: str) -> int:
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(
+            select(func.count())
+            .select_from(SessionRecord)
+            .where(
+                SessionRecord.user_id == user_id,
+                SessionRecord.status.in_(["reviewing", "complete"]),
+            )
+        )
+        return result.scalar_one()
 
 
 async def update_session_tags(session_id: str, tags: list[str]) -> Session | None:

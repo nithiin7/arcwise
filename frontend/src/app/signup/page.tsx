@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import { AuthCard } from "@/components/auth/AuthCard";
 import { AuthDivider } from "@/components/auth/AuthDivider";
 import { OAuthButtons } from "@/components/auth/OAuthButtons";
@@ -14,7 +14,13 @@ import type { AuthResponse } from "@/types";
 
 export default function SignupPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const setAuth = useAuthStore((s) => s.setAuth);
+  const token = useAuthStore((s) => s.token);
+
+  useEffect(() => {
+    if (token) router.replace(searchParams.get("next") ?? "/dashboard");
+  }, [token, router, searchParams]);
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");

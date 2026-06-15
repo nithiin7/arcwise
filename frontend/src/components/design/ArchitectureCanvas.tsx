@@ -6,7 +6,7 @@ import mermaidLib from "mermaid";
 import { toast } from "sonner";
 import { useSettingsStore } from "@/store/settingsStore";
 import Spinner from "@/components/icons/Spinner";
-import type { ArchitectureCanvasProps } from "@/types";
+import type { Annotation, AnnotationColor, ArchitectureCanvasProps } from "@/types";
 
 const MIN_ZOOM = 0.1;
 const MAX_ZOOM = 10;
@@ -16,7 +16,219 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
 
-export function ArchitectureCanvas({ mermaid: diagram, isLoading, onEditCode, onExportJson }: ArchitectureCanvasProps) {
+const ANN_COLORS: Record<AnnotationColor, { bg: string; border: string; header: string; dot: string }> = {
+  yellow: { bg: "rgba(234,179,8,0.1)", border: "rgba(234,179,8,0.4)", header: "rgba(234,179,8,0.18)", dot: "#eab308" },
+  blue:   { bg: "rgba(99,102,241,0.1)", border: "rgba(99,102,241,0.4)", header: "rgba(99,102,241,0.18)", dot: "#6366f1" },
+  green:  { bg: "rgba(34,197,94,0.1)", border: "rgba(34,197,94,0.4)", header: "rgba(34,197,94,0.18)", dot: "#22c55e" },
+  pink:   { bg: "rgba(236,72,153,0.1)", border: "rgba(236,72,153,0.4)", header: "rgba(236,72,153,0.18)", dot: "#ec4899" },
+};
+const ANN_COLOR_KEYS = Object.keys(ANN_COLORS) as AnnotationColor[];
+
+interface AnnotationCardProps {
+  annotation: Annotation;
+  isEditing: boolean;
+  annotateMode: boolean;
+  onDragStart: (e: React.MouseEvent) => void;
+  onToggleEdit: () => void;
+  onChange: (patch: Partial<Annotation>) => void;
+  onDelete: () => void;
+}
+
+function AnnotationCard({
+  annotation,
+  isEditing,
+  annotateMode,
+  onDragStart,
+  onToggleEdit,
+  onChange,
+  onDelete,
+}: AnnotationCardProps) {
+  const c = ANN_COLORS[annotation.color as AnnotationColor] ?? ANN_COLORS.yellow;
+
+  return (
+    <div
+      style={{
+        position: "absolute",
+        left: `${annotation.x * 100}%`,
+        top: `${annotation.y * 100}%`,
+        transform: "translateX(-50%)",
+        width: 200,
+        background: c.bg,
+        border: `1px solid ${c.border}`,
+        borderRadius: 8,
+        boxShadow: "0 4px 16px rgba(0,0,0,0.35)",
+        zIndex: 20,
+        userSelect: "none",
+      }}
+      onClick={(e) => { e.stopPropagation(); if (annotateMode) onToggleEdit(); }}
+    >
+      {/* Header — drag handle */}
+      <div
+        onMouseDown={(e) => {
+          e.stopPropagation();
+          if (annotateMode) onDragStart(e);
+        }}
+        style={{
+          background: c.header,
+          borderBottom: `1px solid ${c.border}`,
+          padding: "5px 8px",
+          cursor: annotateMode ? "grab" : "default",
+          display: "flex",
+          alignItems: "center",
+          gap: 4,
+          borderRadius: "7px 7px 0 0",
+        }}
+      >
+        {isEditing ? (
+          <>
+            <div style={{ display: "flex", gap: 4, flex: 1 }}>
+              {ANN_COLOR_KEYS.map((col) => (
+                <button
+                  key={col}
+                  onClick={(e) => { e.stopPropagation(); onChange({ color: col }); }}
+                  style={{
+                    width: 12,
+                    height: 12,
+                    borderRadius: "50%",
+                    background: ANN_COLORS[col].dot,
+                    border: annotation.color === col ? "2px solid rgba(255,255,255,0.8)" : "2px solid transparent",
+                    cursor: "pointer",
+                    padding: 0,
+                    flexShrink: 0,
+                  }}
+                />
+              ))}
+            </div>
+            <button
+              onClick={(e) => { e.stopPropagation(); onDelete(); }}
+              title="Delete annotation"
+              style={{
+                background: "transparent",
+                border: "none",
+                cursor: "pointer",
+                color: "rgba(255,255,255,0.5)",
+                fontSize: 16,
+                lineHeight: 1,
+                padding: "0 2px",
+              }}
+            >
+              ×
+            </button>
+          </>
+        ) : (
+          <div style={{ display: "flex", alignItems: "center", gap: 5, flex: 1 }}>
+            <div style={{ width: 8, height: 8, borderRadius: "50%", background: c.dot, flexShrink: 0 }} />
+            {annotation.owner && (
+              <span style={{ fontSize: 10, color: "var(--color-text-faint)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {annotation.owner}
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Body */}
+      <div style={{ padding: "8px 10px" }}>
+        {isEditing ? (
+          <>
+            <textarea
+              autoFocus
+              value={annotation.text}
+              onChange={(e) => onChange({ text: e.target.value })}
+              onClick={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
+              placeholder="Add a note…"
+              rows={3}
+              style={{
+                width: "100%",
+                background: "transparent",
+                border: "none",
+                color: "var(--color-text)",
+                fontSize: 12,
+                lineHeight: 1.5,
+                resize: "vertical",
+                outline: "none",
+                fontFamily: "inherit",
+                padding: 0,
+                boxSizing: "border-box",
+              }}
+            />
+            <div style={{ borderTop: `1px solid ${c.border}`, marginTop: 6, paddingTop: 6, display: "flex", flexDirection: "column", gap: 4 }}>
+              <input
+                value={annotation.doc_url ?? ""}
+                onChange={(e) => onChange({ doc_url: e.target.value || undefined })}
+                onClick={(e) => e.stopPropagation()}
+                onMouseDown={(e) => e.stopPropagation()}
+                placeholder="Doc URL (optional)"
+                style={{
+                  width: "100%",
+                  background: "transparent",
+                  border: "none",
+                  color: "var(--color-text-muted)",
+                  fontSize: 11,
+                  outline: "none",
+                  fontFamily: "inherit",
+                  padding: 0,
+                  boxSizing: "border-box",
+                }}
+              />
+              <input
+                value={annotation.owner ?? ""}
+                onChange={(e) => onChange({ owner: e.target.value || undefined })}
+                onClick={(e) => e.stopPropagation()}
+                onMouseDown={(e) => e.stopPropagation()}
+                placeholder="Owner / team (optional)"
+                style={{
+                  width: "100%",
+                  background: "transparent",
+                  border: "none",
+                  color: "var(--color-text-muted)",
+                  fontSize: 11,
+                  outline: "none",
+                  fontFamily: "inherit",
+                  padding: 0,
+                  boxSizing: "border-box",
+                }}
+              />
+            </div>
+          </>
+        ) : (
+          <>
+            {annotation.text ? (
+              <p style={{ margin: 0, fontSize: 12, color: "var(--color-text)", lineHeight: 1.5, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+                {annotation.text}
+              </p>
+            ) : (
+              <p style={{ margin: 0, fontSize: 12, color: "var(--color-text-faint)", fontStyle: "italic" }}>
+                {annotateMode ? "Click to edit" : "No content"}
+              </p>
+            )}
+            {annotation.doc_url && (
+              <a
+                href={annotation.doc_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                style={{ display: "block", fontSize: 11, color: "var(--color-primary)", marginTop: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+              >
+                Docs ↗
+              </a>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export function ArchitectureCanvas({
+  mermaid: diagram,
+  isLoading,
+  onEditCode,
+  onExportJson,
+  annotations: propAnnotations,
+  onAnnotationsChange,
+}: ArchitectureCanvasProps) {
   const [svg, setSvg] = useState("");
   const [svgKey, setSvgKey] = useState(0);
   const [error, setError] = useState("");
@@ -28,6 +240,22 @@ export function ArchitectureCanvas({ mermaid: diagram, isLoading, onEditCode, on
   const svgWrapperRef = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
   const lastPos = useRef({ x: 0, y: 0 });
+
+  // Annotation state
+  const [localAnnotations, setLocalAnnotations] = useState<Annotation[]>(propAnnotations ?? []);
+  const [annotateMode, setAnnotateMode] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const annDragRef = useRef<{ id: string; startX: number; startY: number; origX: number; origY: number } | null>(null);
+  const annDragMoved = useRef(false);
+
+  // Sync annotation list when session first loads (prop changes from undefined → data)
+  const propAnnotationsRef = useRef(propAnnotations);
+  useEffect(() => {
+    if (propAnnotationsRef.current === undefined && propAnnotations !== undefined) {
+      setLocalAnnotations(propAnnotations);
+    }
+    propAnnotationsRef.current = propAnnotations;
+  }, [propAnnotations]);
 
   useEffect(() => {
     const isDark = resolvedTheme === "dark";
@@ -66,8 +294,6 @@ export function ArchitectureCanvas({ mermaid: diagram, isLoading, onEditCode, on
         setSvgKey((k) => k + 1);
       })
       .catch(() => {
-        // If we already have a valid SVG, keep showing it and just toast.
-        // Only set the error state (blank canvas) on the very first render.
         if (svg) {
           toast.error("Syntax error in diagram — the previous valid diagram is still shown.");
         } else {
@@ -78,9 +304,6 @@ export function ArchitectureCanvas({ mermaid: diagram, isLoading, onEditCode, on
   }, [diagram, resolvedTheme]);
 
   // Fit diagram to container after each new render.
-  // Double-RAF: first frame lets React commit the SVG to the DOM, second
-  // frame fires after the browser has calculated layout so scrollWidth/Height
-  // are valid (single RAF fires too early on first render and reads 0).
   useEffect(() => {
     if (!svg) return;
     requestAnimationFrame(() => {
@@ -114,13 +337,41 @@ export function ArchitectureCanvas({ mermaid: diagram, isLoading, onEditCode, on
     return () => el.removeEventListener("wheel", handleWheel);
   }, [handleWheel]);
 
-  const handleMouseDown = (e: React.MouseEvent) => {
-    isDragging.current = true;
-    lastPos.current = { x: e.clientX, y: e.clientY };
-    (e.currentTarget as HTMLElement).style.cursor = "grabbing";
-  };
+  // --- Annotation helpers ---
+  function commitAnnotations(next: Annotation[]) {
+    setLocalAnnotations(next);
+    onAnnotationsChange?.(next);
+  }
 
+  function handleAnnotationDragStart(e: React.MouseEvent, ann: Annotation) {
+    annDragRef.current = {
+      id: ann.id,
+      startX: e.clientX,
+      startY: e.clientY,
+      origX: ann.x,
+      origY: ann.y,
+    };
+    annDragMoved.current = false;
+  }
+
+  // --- Unified mouse handlers on the outer canvas div ---
   const handleMouseMove = (e: React.MouseEvent) => {
+    if (annDragRef.current) {
+      const container = canvasRef.current;
+      if (!container) return;
+      const dx = e.clientX - annDragRef.current.startX;
+      const dy = e.clientY - annDragRef.current.startY;
+      if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
+        annDragMoved.current = true;
+        const rect = container.getBoundingClientRect();
+        const newX = clamp(annDragRef.current.origX + dx / rect.width, 0.02, 0.98);
+        const newY = clamp(annDragRef.current.origY + dy / rect.height, 0.02, 0.98);
+        setLocalAnnotations((prev) =>
+          prev.map((a) => a.id === annDragRef.current!.id ? { ...a, x: newX, y: newY } : a)
+        );
+      }
+      return;
+    }
     if (!isDragging.current) return;
     const dx = e.clientX - lastPos.current.x;
     const dy = e.clientY - lastPos.current.y;
@@ -128,14 +379,56 @@ export function ArchitectureCanvas({ mermaid: diagram, isLoading, onEditCode, on
     setOffset((o) => ({ x: o.x + dx, y: o.y + dy }));
   };
 
-  const stopDrag = (e: React.MouseEvent) => {
+  const handleMouseUp = (e: React.MouseEvent) => {
+    if (annDragRef.current) {
+      if (annDragMoved.current) {
+        onAnnotationsChange?.(localAnnotations);
+      }
+      // If no movement, the card's onClick handles the edit toggle.
+      annDragRef.current = null;
+      annDragMoved.current = false;
+      return;
+    }
     isDragging.current = false;
-    (e.currentTarget as HTMLElement).style.cursor = "grab";
+    (e.currentTarget as HTMLElement).style.cursor = annotateMode ? "crosshair" : "grab";
   };
+
+  const handlePanMouseDown = (e: React.MouseEvent) => {
+    if (annotateMode) return; // pan disabled in annotate mode
+    isDragging.current = true;
+    lastPos.current = { x: e.clientX, y: e.clientY };
+    (e.currentTarget as HTMLElement).style.cursor = "grabbing";
+  };
+
+  // Click on the annotation overlay (empty area) to place a new note
+  const handleOverlayClick = (e: React.MouseEvent) => {
+    if (!annotateMode || !onAnnotationsChange) return;
+    const container = canvasRef.current;
+    if (!container) return;
+    const rect = container.getBoundingClientRect();
+    const x = clamp((e.clientX - rect.left) / rect.width, 0.02, 0.95);
+    const y = clamp((e.clientY - rect.top) / rect.height, 0.02, 0.95);
+    const newAnn: Annotation = {
+      id: crypto.randomUUID(),
+      x,
+      y,
+      text: "",
+      color: "yellow",
+    };
+    const next = [...localAnnotations, newAnn];
+    setLocalAnnotations(next);
+    setEditingId(newAnn.id);
+    onAnnotationsChange(next);
+  };
+
+  const showAnnotations = localAnnotations.length > 0 || annotateMode;
 
   return (
     <div
       ref={canvasRef}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseUp}
       style={{
         position: "relative",
         width: "100%",
@@ -221,16 +514,15 @@ export function ArchitectureCanvas({ mermaid: diagram, isLoading, onEditCode, on
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={stopDrag}
-            onMouseLeave={stopDrag}
+            onMouseDown={handlePanMouseDown}
             style={{
               position: "absolute",
               inset: 0,
               overflow: "hidden",
-              cursor: "grab",
+              cursor: annotateMode ? "crosshair" : "grab",
               userSelect: "none",
+              // In annotate mode let the overlay capture events; pan layer is passive
+              pointerEvents: annotateMode ? "none" : "auto",
             }}
           >
             <div
@@ -250,13 +542,52 @@ export function ArchitectureCanvas({ mermaid: diagram, isLoading, onEditCode, on
         )}
       </AnimatePresence>
 
+      {/* Annotation overlay */}
+      {showAnnotations && (
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            zIndex: 20,
+            // In annotate mode: capture clicks for new-note placement.
+            // In view mode: transparent except for the cards themselves.
+            pointerEvents: annotateMode ? "all" : "none",
+            cursor: annotateMode ? "crosshair" : "default",
+          }}
+          onClick={handleOverlayClick}
+        >
+          {localAnnotations.map((ann) => (
+            <AnnotationCard
+              key={ann.id}
+              annotation={ann}
+              isEditing={editingId === ann.id}
+              annotateMode={annotateMode}
+              onDragStart={(e) => handleAnnotationDragStart(e, ann)}
+              onToggleEdit={() => setEditingId((prev) => (prev === ann.id ? null : ann.id))}
+              onChange={(patch) => {
+                const next = localAnnotations.map((a) =>
+                  a.id === ann.id ? { ...a, ...patch } : a
+                );
+                commitAnnotations(next);
+              }}
+              onDelete={() => {
+                const next = localAnnotations.filter((a) => a.id !== ann.id);
+                if (editingId === ann.id) setEditingId(null);
+                commitAnnotations(next);
+              }}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Toolbar */}
       {!isLoading && svg && !error && (
         <div
           style={{
             position: "absolute",
             bottom: 16,
             right: 16,
-            zIndex: 10,
+            zIndex: 30,
             display: "flex",
             alignItems: "center",
             gap: 4,
@@ -457,6 +788,37 @@ export function ArchitectureCanvas({ mermaid: diagram, isLoading, onEditCode, on
             </button>
           )}
 
+          {onAnnotationsChange && (
+            <>
+              <div style={{ width: 1, height: 16, background: "var(--color-border)", margin: "0 2px" }} />
+              <button
+                onClick={() => {
+                  setAnnotateMode((m) => {
+                    if (m) setEditingId(null);
+                    return !m;
+                  });
+                }}
+                title={annotateMode ? "Exit annotate mode" : "Annotate diagram"}
+                style={{
+                  height: 28,
+                  padding: "0 8px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderRadius: "var(--radius-sm)",
+                  border: annotateMode ? "1px solid var(--color-primary)" : "none",
+                  background: annotateMode ? "rgba(99,102,241,0.15)" : "transparent",
+                  color: annotateMode ? "var(--color-primary)" : "var(--color-text-muted)",
+                  cursor: "pointer",
+                  fontSize: 13,
+                  lineHeight: 1,
+                }}
+              >
+                ✎
+              </button>
+            </>
+          )}
+
           {onEditCode && (
             <>
               <div style={{ width: 1, height: 16, background: "var(--color-border)", margin: "0 2px" }} />
@@ -485,6 +847,29 @@ export function ArchitectureCanvas({ mermaid: diagram, isLoading, onEditCode, on
               </button>
             </>
           )}
+        </div>
+      )}
+
+      {/* Annotate mode hint */}
+      {annotateMode && (
+        <div
+          style={{
+            position: "absolute",
+            top: 12,
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 30,
+            background: "rgba(99,102,241,0.15)",
+            border: "1px solid rgba(99,102,241,0.4)",
+            borderRadius: "var(--radius-md)",
+            padding: "5px 12px",
+            fontSize: 12,
+            color: "var(--color-primary)",
+            pointerEvents: "none",
+            whiteSpace: "nowrap",
+          }}
+        >
+          Click anywhere to add a note · Click a note to edit · Drag to reposition
         </div>
       )}
     </div>

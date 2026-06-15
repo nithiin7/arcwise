@@ -46,6 +46,22 @@ class Revision(BaseModel):
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
+class FollowUpQA(BaseModel):
+    question: str
+    answer: str
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+class Annotation(BaseModel):
+    id: str
+    x: float
+    y: float
+    text: str = ""
+    doc_url: str | None = None
+    owner: str | None = None
+    color: str = "yellow"
+
+
 class Architecture(BaseModel):
     llm_suggested_mermaid: str = ""
     llm_explanation: str = ""
@@ -54,6 +70,8 @@ class Architecture(BaseModel):
     revisions: list[Revision] = Field(default_factory=list)
     final_mermaid: str = ""
     user_description: str | None = None
+    annotations: list[Annotation] = Field(default_factory=list)
+    qa_history: list[FollowUpQA] = Field(default_factory=list)
 
 
 class Session(BaseModel):
@@ -90,6 +108,7 @@ class RefineArchitectureRequest(BaseModel):
 
 class SuggestArchitectureRequest(BaseModel):
     diagram_direction: str = "LR"
+    template_id: str | None = None
 
 
 class SubmitArchitectureRequest(BaseModel):
@@ -98,3 +117,7 @@ class SubmitArchitectureRequest(BaseModel):
 
 class UpdateMermaidRequest(BaseModel):
     mermaid: str
+
+
+class FollowUpQARequest(BaseModel):
+    question: str

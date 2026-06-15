@@ -4,7 +4,18 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import architecture, auth, clarify, models, qa, refine, review, session, share
+from app.api.routes import (
+    architecture,
+    auth,
+    clarify,
+    models,
+    qa,
+    refine,
+    review,
+    session,
+    share,
+    smells,
+)
 from app.core.config import settings
 from app.core.logging import setup_logging
 from app.db.base import Base
@@ -37,6 +48,7 @@ app.include_router(architecture.router, prefix="/api/sessions")
 app.include_router(refine.router, prefix="/api/sessions")
 app.include_router(qa.router, prefix="/api/sessions")
 app.include_router(review.router, prefix="/api/sessions")
+app.include_router(smells.router, prefix="/api/sessions")
 app.include_router(share.sessions_router, prefix="/api/sessions")
 app.include_router(share.public_router, prefix="/api/share")
 

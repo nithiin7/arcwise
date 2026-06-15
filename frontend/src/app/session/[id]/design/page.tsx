@@ -11,6 +11,7 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
 import * as api from "@/api";
+import type { ArchSmell } from "@/api";
 import { chatMessageSchema, type ChatMessageForm } from "@/lib/schemas";
 import { useSessionStore } from "@/store/sessionStore";
 import { useSettingsStore } from "@/store/settingsStore";
@@ -76,6 +77,7 @@ export default function DesignPage() {
   const setReview = useSessionStore((s) => s.setReview);
   const reset = useSessionStore((s) => s.reset);
   const diagramDirection = useSettingsStore((s) => s.diagramDirection);
+  const smellDetectionEnabled = useSettingsStore((s) => s.smellDetectionEnabled);
 
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
@@ -87,6 +89,8 @@ export default function DesignPage() {
   });
   const [justificationsOpen, setJustificationsOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [smells, setSmells] = useState<ArchSmell[]>([]);
+  const [smellsOpen, setSmellsOpen] = useState(true);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputFocusRef = useRef<HTMLInputElement | null>(null);
@@ -218,6 +222,7 @@ export default function DesignPage() {
 
   const refineMutation = useMutation({
     mutationFn: (message: string) => api.refineArchitecture(sessionId, message),
+    onMutate: () => { setSmells([]); },
     onSuccess: (result, message) => {
       addChatMessage({
         role: "assistant",
@@ -248,6 +253,7 @@ export default function DesignPage() {
           duration: 5000,
         }),
       );
+      if (smellDetectionEnabled) smellsMutation.mutate();
       inputFocusRef.current?.focus();
     },
     onError: (err) => {
@@ -294,6 +300,14 @@ export default function DesignPage() {
     onError: (err) => {
       setStreamingFeedback(null);
       toast.error(err instanceof Error ? err.message : "Failed to generate review.");
+    },
+  });
+
+  const smellsMutation = useMutation({
+    mutationFn: () => api.detectSmells(sessionId),
+    onSuccess: (detected) => {
+      setSmells(detected);
+      setSmellsOpen(true);
     },
   });
 
@@ -685,6 +699,219 @@ export default function DesignPage() {
               />
             )}
           </div>
+
+          {/* Problems panel (VS Code style) */}
+          <AnimatePresence>
+            {smellsMutation.isPending && (
+              <motion.div
+                key="smells-loading"
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.18 }}
+                style={{
+                  overflow: "hidden",
+                  flexShrink: 0,
+                  borderTop: "1px solid var(--color-border)",
+                  background: "var(--color-surface)",
+                }}
+              >
+                <div
+                  style={{
+                    height: 32,
+                    padding: "0 12px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                  }}
+                >
+                  <Spinner size={11} />
+                  <span style={{ fontSize: 11, color: "var(--color-text-faint)" }}>
+                    Scanning for architecture issues…
+                  </span>
+                </div>
+              </motion.div>
+            )}
+            {!smellsMutation.isPending && smells.length > 0 && (
+              <motion.div
+                key="smells-results"
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.2 }}
+                style={{
+                  overflow: "hidden",
+                  flexShrink: 0,
+                  borderTop: "1px solid var(--color-border)",
+                  background: "var(--color-surface)",
+                  display: "flex",
+                  flexDirection: "column",
+                }}
+              >
+                {/* Header bar — clicking it expands/collapses */}
+                <div
+                  style={{
+                    height: 32,
+                    display: "flex",
+                    alignItems: "center",
+                    padding: "0 12px",
+                    cursor: "pointer",
+                    userSelect: "none",
+                    gap: 8,
+                  }}
+                  onClick={() => setSmellsOpen((o) => !o)}
+                >
+                  <motion.span
+                    animate={{ rotate: smellsOpen ? 0 : -90 }}
+                    transition={{ duration: 0.15 }}
+                    style={{ display: "flex", color: "var(--color-text-faint)", flexShrink: 0 }}
+                  >
+                    <ChevronDown />
+                  </motion.span>
+                  <span
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 600,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.07em",
+                      color: "var(--color-text-faint)",
+                      flex: 1,
+                    }}
+                  >
+                    Problems
+                  </span>
+                  {smells.some((s) => s.severity === "critical") && (
+                    <span
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 600,
+                        color: "#ef4444",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 4,
+                      }}
+                    >
+                      <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#ef4444", display: "inline-block" }} />
+                      {smells.filter((s) => s.severity === "critical").length} error{smells.filter((s) => s.severity === "critical").length !== 1 ? "s" : ""}
+                    </span>
+                  )}
+                  {smells.some((s) => s.severity === "warning") && (
+                    <span
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 600,
+                        color: "#f59e0b",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 4,
+                      }}
+                    >
+                      <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#f59e0b", display: "inline-block" }} />
+                      {smells.filter((s) => s.severity === "warning").length} warning{smells.filter((s) => s.severity === "warning").length !== 1 ? "s" : ""}
+                    </span>
+                  )}
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setSmells([]); }}
+                    title="Dismiss"
+                    style={{
+                      background: "transparent",
+                      border: "none",
+                      cursor: "pointer",
+                      color: "var(--color-text-faint)",
+                      fontSize: 16,
+                      lineHeight: 1,
+                      padding: "0 2px",
+                      fontFamily: "inherit",
+                      flexShrink: 0,
+                    }}
+                  >
+                    ×
+                  </button>
+                </div>
+
+                {/* Smell rows — VS Code list style */}
+                <AnimatePresence>
+                  {smellsOpen && (
+                    <motion.div
+                      initial={{ height: 0 }}
+                      animate={{ height: "auto" }}
+                      exit={{ height: 0 }}
+                      transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+                      style={{ overflow: "hidden" }}
+                    >
+                      <div
+                        style={{
+                          maxHeight: 180,
+                          overflowY: "auto",
+                          borderTop: "1px solid var(--color-border)",
+                        }}
+                      >
+                        {smells.map((smell, i) => (
+                          <div
+                            key={i}
+                            style={{
+                              display: "flex",
+                              alignItems: "flex-start",
+                              gap: 10,
+                              padding: "7px 14px",
+                              borderBottom: i < smells.length - 1 ? "1px solid var(--color-border)" : "none",
+                            }}
+                          >
+                            <span
+                              style={{
+                                fontSize: 13,
+                                flexShrink: 0,
+                                marginTop: 1,
+                                color: smell.severity === "critical" ? "#ef4444" : "#f59e0b",
+                              }}
+                            >
+                              {smell.severity === "critical" ? "●" : "◆"}
+                            </span>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                                <span
+                                  style={{
+                                    fontSize: 12,
+                                    fontWeight: 600,
+                                    color: "var(--color-text)",
+                                    lineHeight: 1.4,
+                                  }}
+                                >
+                                  {smell.title}
+                                </span>
+                                <span
+                                  style={{
+                                    fontSize: 11,
+                                    color: "var(--color-text-faint)",
+                                    background: "var(--color-surface-offset)",
+                                    padding: "1px 6px",
+                                    borderRadius: 999,
+                                    flexShrink: 0,
+                                  }}
+                                >
+                                  {smell.component}
+                                </span>
+                              </div>
+                              <p
+                                style={{
+                                  fontSize: 12,
+                                  color: "var(--color-text-muted)",
+                                  margin: "2px 0 0",
+                                  lineHeight: 1.45,
+                                }}
+                              >
+                                {smell.hint}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* History strip */}
           {showHistoryStrip && (

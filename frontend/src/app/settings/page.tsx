@@ -6,12 +6,14 @@ import { PROVIDERS } from "@/constants/settings";
 import { AppearanceSetting } from "@/components/settings/AppearanceSetting";
 import { ModelSetting } from "@/components/settings/ModelSetting";
 import { DiagramSetting } from "@/components/settings/DiagramSetting";
+import { SmellDetectionSetting } from "@/components/settings/SmellDetectionSetting";
 import { DataSetting } from "@/components/settings/DataSetting";
 
 const NAV = [
   { id: "appearance", label: "Appearance", group: "Preferences" },
   { id: "model", label: "Model", group: "Preferences" },
   { id: "diagram", label: "Diagram", group: "Preferences" },
+  { id: "analysis", label: "Analysis", group: "Preferences" },
   { id: "api-keys", label: "API Keys", group: "API" },
   { id: "local-models", label: "Local Models", group: "API" },
   { id: "data", label: "Storage", group: "Data" },
@@ -131,6 +133,10 @@ export default function SettingsPage() {
 
           <Section id="diagram" title="Diagram" description="Layout direction for generated architecture diagrams.">
             <DiagramSetting />
+          </Section>
+
+          <Section id="analysis" title="Analysis" description="AI-powered analysis features that run during your design sessions.">
+            <SmellDetectionSetting />
           </Section>
 
           <Section

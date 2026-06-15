@@ -3,9 +3,14 @@
 import Link from "next/link";
 import { motion } from "framer-motion";
 import LogoMark from "@/components/icons/LogoMark";
+import { UserMenu } from "@/components/UserMenu";
+import { useAuthStore } from "@/store/authStore";
 import { FEATURES, featureContainerVariants, featureItemVariants } from "@/constants/home";
 
 export default function LandingPage() {
+  const token = useAuthStore((s) => s.token);
+  const isLoggedIn = !!token;
+
   return (
     <div
       style={{
@@ -46,23 +51,46 @@ export default function LandingPage() {
             Arcwise
           </span>
         </div>
-        <Link
-          href="/dashboard"
-          style={{
-            padding: "7px 18px",
-            borderRadius: "var(--radius-sm)",
-            background: "var(--color-primary)",
-            color: "#fff",
-            fontSize: 13,
-            fontWeight: 500,
-            textDecoration: "none",
-            transition: "opacity 0.15s",
-          }}
-          onMouseEnter={(e) => ((e.currentTarget as HTMLAnchorElement).style.opacity = "0.85")}
-          onMouseLeave={(e) => ((e.currentTarget as HTMLAnchorElement).style.opacity = "1")}
-        >
-          Open App
-        </Link>
+        {isLoggedIn ? (
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <Link
+              href="/dashboard"
+              style={{
+                padding: "7px 18px",
+                borderRadius: "var(--radius-sm)",
+                background: "var(--color-primary)",
+                color: "#fff",
+                fontSize: 13,
+                fontWeight: 500,
+                textDecoration: "none",
+                transition: "opacity 0.15s",
+              }}
+              onMouseEnter={(e) => ((e.currentTarget as HTMLAnchorElement).style.opacity = "0.85")}
+              onMouseLeave={(e) => ((e.currentTarget as HTMLAnchorElement).style.opacity = "1")}
+            >
+              Dashboard
+            </Link>
+            <UserMenu />
+          </div>
+        ) : (
+          <Link
+            href="/login"
+            style={{
+              padding: "7px 18px",
+              borderRadius: "var(--radius-sm)",
+              background: "var(--color-primary)",
+              color: "#fff",
+              fontSize: 13,
+              fontWeight: 500,
+              textDecoration: "none",
+              transition: "opacity 0.15s",
+            }}
+            onMouseEnter={(e) => ((e.currentTarget as HTMLAnchorElement).style.opacity = "0.85")}
+            onMouseLeave={(e) => ((e.currentTarget as HTMLAnchorElement).style.opacity = "1")}
+          >
+            Sign in
+          </Link>
+        )}
       </nav>
 
       {/* Hero */}
@@ -168,7 +196,7 @@ export default function LandingPage() {
 
           <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
             <Link
-              href="/dashboard"
+              href={isLoggedIn ? "/dashboard" : "/login"}
               style={{
                 display: "inline-flex",
                 alignItems: "center",
@@ -192,7 +220,7 @@ export default function LandingPage() {
                 (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(0)";
               }}
             >
-              Start designing
+              {isLoggedIn ? "Go to dashboard" : "Sign in"}
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M5 12h14M12 5l7 7-7 7" />
               </svg>
@@ -436,7 +464,7 @@ export default function LandingPage() {
             Pick any system — URL shortener, payment processor, video platform, real-time messaging — and get a complete architecture with expert analysis.
           </p>
           <Link
-            href="/dashboard"
+            href={isLoggedIn ? "/dashboard" : "/login"}
             style={{
               display: "inline-flex",
               alignItems: "center",
@@ -459,7 +487,7 @@ export default function LandingPage() {
               (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(0)";
             }}
           >
-            Go to dashboard
+            {isLoggedIn ? "Go to dashboard" : "Sign in"}
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M5 12h14M12 5l7 7-7 7" />
             </svg>

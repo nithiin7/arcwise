@@ -173,6 +173,8 @@ export interface ArchitectureCanvasProps {
   onExportJson?: () => void;
   annotations?: Annotation[];
   onAnnotationsChange?: (annotations: Annotation[]) => void;
+  onNodeClick?: (label: string | null, rect?: DOMRect) => void;
+  selectedNodeLabel?: string | null;
 }
 
 export interface ComponentJustificationsProps {

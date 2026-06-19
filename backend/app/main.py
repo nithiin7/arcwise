@@ -1,8 +1,11 @@
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from litellm.exceptions import APIConnectionError as LiteLLMAPIConnectionError
+from litellm.exceptions import ServiceUnavailableError as LiteLLMServiceUnavailableError
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.api.routes import (
     architecture,
@@ -31,6 +34,23 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
 
 
 app = FastAPI(title="Arcwise API", version="0.1.0", lifespan=lifespan)
+
+_OLLAMA_DOWN = {"detail": "Ollama is not running. Start it with `ollama serve` and try again."}
+
+
+@app.exception_handler(LiteLLMAPIConnectionError)
+async def ollama_connection_error(
+    request: Request, exc: LiteLLMAPIConnectionError
+) -> JSONResponse:
+    return JSONResponse(status_code=503, content=_OLLAMA_DOWN)
+
+
+@app.exception_handler(LiteLLMServiceUnavailableError)
+async def ollama_unavailable_error(
+    request: Request, exc: LiteLLMServiceUnavailableError
+) -> JSONResponse:
+    return JSONResponse(status_code=503, content=_OLLAMA_DOWN)
+
 
 app.add_middleware(
     CORSMiddleware,

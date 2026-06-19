@@ -27,6 +27,8 @@ async def architecture_suggest(
     session.architecture.llm_suggested_mermaid = result.get("mermaid_dsl", "")
     session.architecture.llm_explanation = result.get("explanation", "")
     session.architecture.component_justifications = result.get("component_justifications", {})
+    session.architecture.component_alternatives = result.get("component_alternatives", {})
+    session.architecture.component_tradeoffs = result.get("component_tradeoffs", {})
     session.architecture.scale_assumption = result.get("scale_assumption", "")
     if not session.tags:
         raw_tags = result.get("tags", [])
@@ -37,6 +39,8 @@ async def architecture_suggest(
         "explanation": result.get("explanation", ""),
         "mermaid_dsl": result.get("mermaid_dsl", ""),
         "component_justifications": result.get("component_justifications", {}),
+        "component_alternatives": result.get("component_alternatives", {}),
+        "component_tradeoffs": result.get("component_tradeoffs", {}),
         "scale_assumption": result.get("scale_assumption", ""),
     }
 

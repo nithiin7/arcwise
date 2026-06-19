@@ -63,6 +63,168 @@ function withNewNodeHighlights(before: string, after: string): string {
   return `${after}\n${styleLines}`;
 }
 
+function findByLabel<T>(label: string, map: Record<string, T>): T | null {
+  if (map[label] != null) return map[label];
+  const lower = label.toLowerCase();
+  for (const [k, v] of Object.entries(map)) {
+    if (k.toLowerCase() === lower) return v;
+  }
+  for (const [k, v] of Object.entries(map)) {
+    if (lower.includes(k.toLowerCase()) || k.toLowerCase().includes(lower)) return v;
+  }
+  return null;
+}
+
+function findJustification(label: string, justifications: Record<string, string>): string | null {
+  return findByLabel(label, justifications);
+}
+
+function NodeInfoPopup({
+  label,
+  justification,
+  alternatives,
+  tradeoffs,
+  rect,
+  onClose,
+  onAskMore,
+}: {
+  label: string;
+  justification: string | null;
+  alternatives: string[] | null;
+  tradeoffs: string | null;
+  rect: DOMRect;
+  onClose: () => void;
+  onAskMore: () => void;
+}) {
+  const POPUP_WIDTH = 288;
+  const GAP = 10;
+
+  let left = Math.round(rect.left + rect.width / 2 - POPUP_WIDTH / 2);
+  left = Math.max(8, Math.min(left, window.innerWidth - POPUP_WIDTH - 8));
+
+  const showAbove = rect.top > 180;
+
+  const sectionLabel: React.CSSProperties = {
+    fontSize: 10,
+    fontWeight: 700,
+    letterSpacing: "0.07em",
+    textTransform: "uppercase",
+    color: "var(--color-text-faint)",
+    marginBottom: 3,
+  };
+  const sectionText: React.CSSProperties = {
+    fontSize: 12,
+    color: "var(--color-text-muted)",
+    lineHeight: 1.6,
+    margin: 0,
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.97, y: showAbove ? 4 : -4 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.97, y: showAbove ? 4 : -4 }}
+      transition={{ duration: 0.14, ease: [0.16, 1, 0.3, 1] }}
+      style={{
+        position: "fixed",
+        width: POPUP_WIDTH,
+        left,
+        zIndex: 50,
+        ...(showAbove
+          ? { bottom: window.innerHeight - rect.top + GAP }
+          : { top: rect.bottom + GAP }),
+        background: "var(--color-surface)",
+        border: "1px solid var(--color-border)",
+        borderRadius: "var(--radius-md)",
+        boxShadow: "0 8px 24px rgba(0,0,0,0.35)",
+        overflow: "hidden",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "9px 12px 8px",
+          borderBottom: "1px solid var(--color-border)",
+          background: "rgba(99,102,241,0.07)",
+        }}
+      >
+        <span
+          style={{
+            fontSize: 12,
+            fontWeight: 700,
+            color: "var(--color-primary)",
+            letterSpacing: "0.01em",
+          }}
+        >
+          {label}
+        </span>
+        <button
+          onClick={onClose}
+          style={{
+            background: "transparent",
+            border: "none",
+            cursor: "pointer",
+            color: "var(--color-text-faint)",
+            fontSize: 16,
+            lineHeight: 1,
+            padding: "0 2px",
+            fontFamily: "inherit",
+          }}
+        >
+          ×
+        </button>
+      </div>
+      <div style={{ padding: "10px 12px 12px", display: "flex", flexDirection: "column", gap: 10 }}>
+        <div>
+          <p style={sectionLabel}>Role</p>
+          <p style={sectionText}>
+            {justification ?? "No description available for this component."}
+          </p>
+        </div>
+
+        {alternatives && alternatives.length > 0 && (
+          <div>
+            <p style={sectionLabel}>Alternatives</p>
+            <ul style={{ margin: 0, padding: "0 0 0 14px", display: "flex", flexDirection: "column", gap: 2 }}>
+              {alternatives.map((alt) => (
+                <li key={alt} style={sectionText}>{alt}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {tradeoffs && (
+          <div>
+            <p style={sectionLabel}>Tradeoffs</p>
+            <p style={sectionText}>{tradeoffs}</p>
+          </div>
+        )}
+
+        <button
+          onClick={onAskMore}
+          style={{
+            width: "100%",
+            padding: "7px 10px",
+            background: "rgba(99,102,241,0.08)",
+            border: "1px solid rgba(99,102,241,0.2)",
+            borderRadius: "var(--radius-sm)",
+            color: "var(--color-primary)",
+            cursor: "pointer",
+            fontSize: 12,
+            fontWeight: 500,
+            fontFamily: "inherit",
+            textAlign: "left",
+          }}
+        >
+          Ask more →
+        </button>
+      </div>
+    </motion.div>
+  );
+}
+
 export default function DesignPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
@@ -79,6 +241,7 @@ export default function DesignPage() {
   const diagramDirection = useSettingsStore((s) => s.diagramDirection);
   const smellDetectionEnabled = useSettingsStore((s) => s.smellDetectionEnabled);
 
+  const [selectedNode, setSelectedNode] = useState<{ label: string; rect: DOMRect } | null>(null);
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [codeEditorOpen, setCodeEditorOpen] = useState(false);
@@ -122,6 +285,7 @@ export default function DesignPage() {
     register: qaRegister,
     handleSubmit: qaRhfSubmit,
     reset: resetQaForm,
+    setValue: setQaValue,
     formState: { isValid: isQaValid },
   } = useForm<ChatMessageForm>({
     resolver: zodResolver(chatMessageSchema),
@@ -160,6 +324,7 @@ export default function DesignPage() {
     mutationFn: (variables?: { templateId?: string }) =>
       api.suggestArchitecture(sessionId, diagramDirection, variables?.templateId),
     onSuccess: (result) => {
+      setSelectedNode(null);
       setSession({
         ...session!,
         architecture: {
@@ -167,6 +332,8 @@ export default function DesignPage() {
           llm_suggested_mermaid: result.mermaid_dsl,
           llm_explanation: result.explanation,
           component_justifications: result.component_justifications,
+          component_alternatives: result.component_alternatives,
+          component_tradeoffs: result.component_tradeoffs,
           scale_assumption: result.scale_assumption,
           final_mermaid: result.mermaid_dsl,
         },
@@ -220,6 +387,15 @@ export default function DesignPage() {
     return () => window.removeEventListener("keydown", onKey);
   }, [codeEditorOpen, helpOpen]);
 
+  // Escape closes node popup (runs before the help-modal Escape handler above)
+  useEffect(() => {
+    function onEsc(e: KeyboardEvent) {
+      if (e.key === "Escape" && selectedNode) setSelectedNode(null);
+    }
+    document.addEventListener("keydown", onEsc);
+    return () => document.removeEventListener("keydown", onEsc);
+  }, [selectedNode]);
+
   const refineMutation = useMutation({
     mutationFn: (message: string) => api.refineArchitecture(sessionId, message),
     onMutate: () => { setSmells([]); },
@@ -231,6 +407,7 @@ export default function DesignPage() {
         timestamp: new Date(),
       });
       updateArchitectureMermaid(result.updated_mermaid);
+      setSelectedNode(null);
       const latest = useSessionStore.getState().session;
       if (latest) {
         const newRevision: Revision = {
@@ -368,6 +545,18 @@ export default function DesignPage() {
         toast.error("Failed to save annotations.")
       );
     }, 600);
+  }
+
+  function handleNodeClick(label: string | null, rect?: DOMRect) {
+    if (!label || !rect) { setSelectedNode(null); return; }
+    setSelectedNode({ label, rect });
+  }
+
+  function handleAskMore(label: string) {
+    setSelectedNode(null);
+    setActiveTab("qa");
+    setQaValue("message", `Tell me more about ${label}`, { shouldValidate: true });
+    setTimeout(() => qaInputRef.current?.focus(), 180);
   }
 
   function handleSend(data: ChatMessageForm) {
@@ -673,6 +862,8 @@ export default function DesignPage() {
                 onEditCode={() => setCodeEditorOpen(true)}
                 annotations={arch.annotations}
                 onAnnotationsChange={handleAnnotationsChange}
+                onNodeClick={handleNodeClick}
+                selectedNodeLabel={selectedNode?.label ?? null}
                 onExportJson={() => {
                   const data = {
                     problem: session.problem,
@@ -1592,6 +1783,20 @@ export default function DesignPage() {
       </div>
 
       <AnimatePresence>
+        {selectedNode && (
+          <NodeInfoPopup
+            label={selectedNode.label}
+            justification={findJustification(selectedNode.label, arch.component_justifications)}
+            alternatives={findByLabel(selectedNode.label, arch.component_alternatives ?? {})}
+            tradeoffs={findByLabel(selectedNode.label, arch.component_tradeoffs ?? {})}
+            rect={selectedNode.rect}
+            onClose={() => setSelectedNode(null)}
+            onAskMore={() => handleAskMore(selectedNode.label)}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
         {showTemplatePicker && (
           <TemplatePicker onSelect={handleTemplateSelect} />
         )}
@@ -1714,6 +1919,7 @@ export default function DesignPage() {
             onApply={async (mermaid) => {
               await api.updateMermaid(sessionId, mermaid);
               updateArchitectureMermaid(mermaid);
+              setSelectedNode(null);
             }}
             onClose={() => setCodeEditorOpen(false)}
           />

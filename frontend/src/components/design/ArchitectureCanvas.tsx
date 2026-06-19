@@ -228,6 +228,8 @@ export function ArchitectureCanvas({
   onExportJson,
   annotations: propAnnotations,
   onAnnotationsChange,
+  onNodeClick,
+  selectedNodeLabel,
 }: ArchitectureCanvasProps) {
   const [svg, setSvg] = useState("");
   const [svgKey, setSvgKey] = useState(0);
@@ -240,6 +242,27 @@ export function ArchitectureCanvas({
   const svgWrapperRef = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
   const lastPos = useRef({ x: 0, y: 0 });
+
+  // Node click / highlight state
+  const highlightedNodeRef = useRef<SVGGElement | null>(null);
+  const panStartPosRef = useRef({ x: 0, y: 0 });
+
+  function clearNodeHighlight() {
+    if (highlightedNodeRef.current) {
+      highlightedNodeRef.current.style.filter = "";
+      highlightedNodeRef.current = null;
+    }
+  }
+
+  // Clear stale DOM ref when SVG is replaced by a new render
+  useEffect(() => {
+    highlightedNodeRef.current = null;
+  }, [svgKey]);
+
+  // Sync with parent: when selectedNodeLabel becomes falsy, remove the highlight
+  useEffect(() => {
+    if (!selectedNodeLabel) clearNodeHighlight();
+  }, [selectedNodeLabel]);
 
   // Annotation state
   const [localAnnotations, setLocalAnnotations] = useState<Annotation[]>(propAnnotations ?? []);
@@ -290,7 +313,8 @@ export function ArchitectureCanvas({
       .render(id, diagram)
       .then(({ svg: rendered }) => {
         setError("");
-        setSvg(rendered);
+        // Inject cursor:pointer on clickable nodes so the grab cursor doesn't win
+        setSvg(rendered.replace('</svg>', '<style>.node,.node *{cursor:pointer}</style></svg>'));
         setSvgKey((k) => k + 1);
       })
       .catch(() => {
@@ -395,9 +419,43 @@ export function ArchitectureCanvas({
 
   const handlePanMouseDown = (e: React.MouseEvent) => {
     if (annotateMode) return; // pan disabled in annotate mode
+    e.preventDefault(); // prevent native drag-start which would swallow the click event
     isDragging.current = true;
     lastPos.current = { x: e.clientX, y: e.clientY };
+    panStartPosRef.current = { x: e.clientX, y: e.clientY };
     (e.currentTarget as HTMLElement).style.cursor = "grabbing";
+  };
+
+  const handlePanLayerClick = (e: React.MouseEvent) => {
+    if (!onNodeClick) return;
+    // Ignore if the mouse moved significantly (was a pan, not a click)
+    if (
+      Math.abs(e.clientX - panStartPosRef.current.x) > 8 ||
+      Math.abs(e.clientY - panStartPosRef.current.y) > 8
+    ) return;
+
+    let el = e.target as Element | null;
+    while (el && el !== e.currentTarget) {
+      if (el instanceof SVGGElement && el.classList.contains("node")) {
+        const labelEl =
+          el.querySelector(".nodeLabel") ??
+          el.querySelector(".label text") ??
+          el.querySelector("text");
+        const label = (labelEl?.textContent ?? "").trim();
+        if (label) {
+          clearNodeHighlight();
+          el.style.filter = "drop-shadow(0 0 6px rgba(99,102,241,0.85))";
+          highlightedNodeRef.current = el;
+          onNodeClick(label, el.getBoundingClientRect());
+          return;
+        }
+        break;
+      }
+      el = el.parentElement;
+    }
+    // Clicked empty canvas space — clear selection
+    clearNodeHighlight();
+    onNodeClick(null);
   };
 
   // Click on the annotation overlay (empty area) to place a new note
@@ -515,6 +573,7 @@ export function ArchitectureCanvas({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
             onMouseDown={handlePanMouseDown}
+            onClick={handlePanLayerClick}
             style={{
               position: "absolute",
               inset: 0,

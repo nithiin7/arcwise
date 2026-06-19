@@ -63,6 +63,8 @@ export interface Architecture {
   llm_suggested_mermaid: string;
   llm_explanation: string;
   component_justifications: Record<string, string>;
+  component_alternatives?: Record<string, string[]>;
+  component_tradeoffs?: Record<string, string>;
   scale_assumption: string;
   revisions: Revision[];
   final_mermaid: string;
@@ -173,6 +175,8 @@ export interface ArchitectureCanvasProps {
   onExportJson?: () => void;
   annotations?: Annotation[];
   onAnnotationsChange?: (annotations: Annotation[]) => void;
+  onNodeClick?: (label: string | null, rect?: DOMRect) => void;
+  selectedNodeLabel?: string | null;
 }
 
 export interface ComponentJustificationsProps {

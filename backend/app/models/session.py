@@ -66,6 +66,8 @@ class Architecture(BaseModel):
     llm_suggested_mermaid: str = ""
     llm_explanation: str = ""
     component_justifications: dict[str, str] = Field(default_factory=dict)
+    component_alternatives: dict[str, list[str]] = Field(default_factory=dict)
+    component_tradeoffs: dict[str, str] = Field(default_factory=dict)
     scale_assumption: str = ""
     revisions: list[Revision] = Field(default_factory=list)
     final_mermaid: str = ""

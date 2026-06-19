@@ -5,6 +5,8 @@ export interface SuggestArchitectureResponse {
   explanation: string;
   mermaid_dsl: string;
   component_justifications: Record<string, string>;
+  component_alternatives: Record<string, string[]>;
+  component_tradeoffs: Record<string, string>;
   scale_assumption: string;
 }
 

@@ -22,6 +22,8 @@ Return ONLY valid JSON — no prose, no markdown fences:
   "explanation": "<3-4 paragraphs describing the architecture>",
   "mermaid_dsl": "flowchart {direction}\\n...",
   "component_justifications": {{ "ComponentName": "reason for inclusion" }},
+  "component_alternatives": {{ "ComponentName": ["Alternative A", "Alternative B"] }},
+  "component_tradeoffs": {{ "ComponentName": "key tradeoff or limitation of this choice" }},
   "scale_assumption": "<'Assumed X DAU based on problem context' or 'Based on user input: X'>",
   "tags": ["<tag1>", "<tag2>"]
 }}

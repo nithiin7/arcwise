@@ -313,7 +313,8 @@ export function ArchitectureCanvas({
       .render(id, diagram)
       .then(({ svg: rendered }) => {
         setError("");
-        setSvg(rendered);
+        // Inject cursor:pointer on clickable nodes so the grab cursor doesn't win
+        setSvg(rendered.replace('</svg>', '<style>.node,.node *{cursor:pointer}</style></svg>'));
         setSvgKey((k) => k + 1);
       })
       .catch(() => {
@@ -418,6 +419,7 @@ export function ArchitectureCanvas({
 
   const handlePanMouseDown = (e: React.MouseEvent) => {
     if (annotateMode) return; // pan disabled in annotate mode
+    e.preventDefault(); // prevent native drag-start which would swallow the click event
     isDragging.current = true;
     lastPos.current = { x: e.clientX, y: e.clientY };
     panStartPosRef.current = { x: e.clientX, y: e.clientY };
@@ -428,8 +430,8 @@ export function ArchitectureCanvas({
     if (!onNodeClick) return;
     // Ignore if the mouse moved significantly (was a pan, not a click)
     if (
-      Math.abs(e.clientX - panStartPosRef.current.x) > 5 ||
-      Math.abs(e.clientY - panStartPosRef.current.y) > 5
+      Math.abs(e.clientX - panStartPosRef.current.x) > 8 ||
+      Math.abs(e.clientY - panStartPosRef.current.y) > 8
     ) return;
 
     let el = e.target as Element | null;

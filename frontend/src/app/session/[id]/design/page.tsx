@@ -63,38 +63,61 @@ function withNewNodeHighlights(before: string, after: string): string {
   return `${after}\n${styleLines}`;
 }
 
-function findJustification(label: string, justifications: Record<string, string>): string | null {
-  if (justifications[label]) return justifications[label];
+function findByLabel<T>(label: string, map: Record<string, T>): T | null {
+  if (map[label] != null) return map[label];
   const lower = label.toLowerCase();
-  for (const [k, v] of Object.entries(justifications)) {
+  for (const [k, v] of Object.entries(map)) {
     if (k.toLowerCase() === lower) return v;
   }
-  for (const [k, v] of Object.entries(justifications)) {
+  for (const [k, v] of Object.entries(map)) {
     if (lower.includes(k.toLowerCase()) || k.toLowerCase().includes(lower)) return v;
   }
   return null;
 }
 
+function findJustification(label: string, justifications: Record<string, string>): string | null {
+  return findByLabel(label, justifications);
+}
+
 function NodeInfoPopup({
   label,
   justification,
+  alternatives,
+  tradeoffs,
   rect,
   onClose,
   onAskMore,
 }: {
   label: string;
   justification: string | null;
+  alternatives: string[] | null;
+  tradeoffs: string | null;
   rect: DOMRect;
   onClose: () => void;
   onAskMore: () => void;
 }) {
-  const POPUP_WIDTH = 272;
+  const POPUP_WIDTH = 288;
   const GAP = 10;
 
   let left = Math.round(rect.left + rect.width / 2 - POPUP_WIDTH / 2);
   left = Math.max(8, Math.min(left, window.innerWidth - POPUP_WIDTH - 8));
 
   const showAbove = rect.top > 180;
+
+  const sectionLabel: React.CSSProperties = {
+    fontSize: 10,
+    fontWeight: 700,
+    letterSpacing: "0.07em",
+    textTransform: "uppercase",
+    color: "var(--color-text-faint)",
+    marginBottom: 3,
+  };
+  const sectionText: React.CSSProperties = {
+    fontSize: 12,
+    color: "var(--color-text-muted)",
+    lineHeight: 1.6,
+    margin: 0,
+  };
 
   return (
     <motion.div
@@ -153,17 +176,32 @@ function NodeInfoPopup({
           ×
         </button>
       </div>
-      <div style={{ padding: "10px 12px 12px" }}>
-        <p
-          style={{
-            fontSize: 12,
-            color: "var(--color-text-muted)",
-            lineHeight: 1.65,
-            margin: "0 0 10px",
-          }}
-        >
-          {justification ?? "No description available for this component."}
-        </p>
+      <div style={{ padding: "10px 12px 12px", display: "flex", flexDirection: "column", gap: 10 }}>
+        <div>
+          <p style={sectionLabel}>Role</p>
+          <p style={sectionText}>
+            {justification ?? "No description available for this component."}
+          </p>
+        </div>
+
+        {alternatives && alternatives.length > 0 && (
+          <div>
+            <p style={sectionLabel}>Alternatives</p>
+            <ul style={{ margin: 0, padding: "0 0 0 14px", display: "flex", flexDirection: "column", gap: 2 }}>
+              {alternatives.map((alt) => (
+                <li key={alt} style={sectionText}>{alt}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {tradeoffs && (
+          <div>
+            <p style={sectionLabel}>Tradeoffs</p>
+            <p style={sectionText}>{tradeoffs}</p>
+          </div>
+        )}
+
         <button
           onClick={onAskMore}
           style={{
@@ -294,6 +332,8 @@ export default function DesignPage() {
           llm_suggested_mermaid: result.mermaid_dsl,
           llm_explanation: result.explanation,
           component_justifications: result.component_justifications,
+          component_alternatives: result.component_alternatives,
+          component_tradeoffs: result.component_tradeoffs,
           scale_assumption: result.scale_assumption,
           final_mermaid: result.mermaid_dsl,
         },
@@ -1747,6 +1787,8 @@ export default function DesignPage() {
           <NodeInfoPopup
             label={selectedNode.label}
             justification={findJustification(selectedNode.label, arch.component_justifications)}
+            alternatives={findByLabel(selectedNode.label, arch.component_alternatives ?? {})}
+            tradeoffs={findByLabel(selectedNode.label, arch.component_tradeoffs ?? {})}
             rect={selectedNode.rect}
             onClose={() => setSelectedNode(null)}
             onAskMore={() => handleAskMore(selectedNode.label)}
